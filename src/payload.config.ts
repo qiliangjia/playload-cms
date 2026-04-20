@@ -2,11 +2,14 @@ import fs from 'fs'
 import path from 'path'
 import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { seoPlugin } from '@payloadcms/plugin-seo'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
 import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
+import { en } from '@payloadcms/translations/languages/en'
+import { zh } from '@payloadcms/translations/languages/zh'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -58,6 +61,10 @@ export default buildConfig({
     defaultLocale: 'en',
     fallback: true,
   },
+  i18n: {
+    supportedLanguages: { en, zh },
+    fallbackLanguage: 'en',
+  },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -69,6 +76,12 @@ export default buildConfig({
     r2Storage({
       bucket: cloudflare.env.R2,
       collections: { media: true },
+    }),
+    seoPlugin({
+      collections: ['blogPosts', 'docPages'],
+      uploadsCollection: 'media',
+      generateTitle: ({ doc }) => (doc.title as string) ?? '',
+      generateDescription: ({ doc }) => (doc.excerpt as string) ?? '',
     }),
   ],
 })
