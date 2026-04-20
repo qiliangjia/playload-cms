@@ -51,54 +51,51 @@ export const BlogPosts: CollectionConfig = {
   },
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-      localized: true,
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      localized: true,
-      index: true,
-      admin: { description: '留空时自动从标题生成（仅新建时）' },
-    },
-    {
-      name: 'excerpt',
-      type: 'textarea',
-      localized: true,
-    },
-    {
-      name: 'content',
-      type: 'richText',
-      localized: true,
-    },
-    // contentHtml is a virtual field populated by the afterRead hook above
-    {
-      name: 'contentHtml',
-      type: 'text',
-      virtual: true,
-      admin: { hidden: true },
-    },
-    {
-      name: 'coverImage',
-      type: 'upload',
-      relationTo: 'media',
-    },
-    {
-      name: 'author',
-      type: 'text',
-    },
-    {
-      name: 'publishDate',
-      type: 'date',
-      admin: { date: { pickerAppearance: 'dayAndTime' } },
-    },
-    {
-      name: 'tags',
-      type: 'array',
-      fields: [{ name: 'tag', type: 'text', required: true }],
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Content',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+              localized: true,
+            },
+            {
+              name: 'excerpt',
+              type: 'textarea',
+              localized: true,
+            },
+            {
+              name: 'content',
+              type: 'richText',
+              localized: true,
+            },
+            {
+              name: 'contentHtml',
+              type: 'text',
+              virtual: true,
+              admin: { hidden: true },
+            },
+          ],
+        },
+        {
+          label: 'Meta',
+          fields: [
+            {
+              name: 'coverImage',
+              type: 'upload',
+              relationTo: 'media',
+            },
+            {
+              name: 'tags',
+              type: 'array',
+              fields: [{ name: 'tag', type: 'text', required: true }],
+            },
+          ],
+        },
+      ],
     },
     {
       name: 'status',
@@ -109,6 +106,31 @@ export const BlogPosts: CollectionConfig = {
       ],
       defaultValue: 'draft',
       required: true,
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      localized: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: '留空时自动从标题生成（仅新建时）',
+      },
+    },
+    {
+      name: 'publishDate',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayAndTime' },
+      },
+    },
+    {
+      name: 'author',
+      type: 'text',
+      admin: { position: 'sidebar' },
     },
   ],
 }

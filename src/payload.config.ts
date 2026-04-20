@@ -80,6 +80,7 @@ export default buildConfig({
     seoPlugin({
       collections: ['blogPosts', 'docPages'],
       uploadsCollection: 'media',
+      tabbedUI: true,
       generateTitle: ({ doc }) => (doc.title as string) ?? '',
       generateDescription: ({ doc }) => (doc.excerpt as string) ?? '',
     }),

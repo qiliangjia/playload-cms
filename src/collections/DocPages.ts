@@ -50,44 +50,30 @@ export const DocPages: CollectionConfig = {
   },
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-      localized: true,
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      localized: true,
-      index: true,
-      admin: { description: '留空时自动从标题生成（仅新建时）' },
-    },
-    {
-      name: 'content',
-      type: 'richText',
-      localized: true,
-    },
-    {
-      name: 'contentHtml',
-      type: 'text',
-      virtual: true,
-      admin: { hidden: true },
-    },
-    {
-      name: 'sidebarOrder',
-      type: 'number',
-      admin: { description: '侧边栏排序，数字越小越靠前' },
-    },
-    {
-      name: 'relatedProduct',
-      type: 'select',
-      options: [
-        { label: 'Shield', value: 'shield' },
-        { label: 'Audience Recovery', value: 'audience-recovery' },
-        { label: 'Reflow Link', value: 'reflow-link' },
-        { label: 'Re-engagement', value: 're-engagement' },
-        { label: 'PWA Install', value: 'pwa-install' },
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Content',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+              localized: true,
+            },
+            {
+              name: 'content',
+              type: 'richText',
+              localized: true,
+            },
+            {
+              name: 'contentHtml',
+              type: 'text',
+              virtual: true,
+              admin: { hidden: true },
+            },
+          ],
+        },
       ],
     },
     {
@@ -99,6 +85,38 @@ export const DocPages: CollectionConfig = {
       ],
       defaultValue: 'draft',
       required: true,
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      localized: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description: '留空时自动从标题生成（仅新建时）',
+      },
+    },
+    {
+      name: 'sidebarOrder',
+      type: 'number',
+      admin: {
+        position: 'sidebar',
+        description: '侧边栏排序，数字越小越靠前',
+      },
+    },
+    {
+      name: 'relatedProduct',
+      type: 'select',
+      options: [
+        { label: 'Shield', value: 'shield' },
+        { label: 'Audience Recovery', value: 'audience-recovery' },
+        { label: 'Reflow Link', value: 'reflow-link' },
+        { label: 'Re-engagement', value: 're-engagement' },
+        { label: 'PWA Install', value: 'pwa-install' },
+      ],
+      admin: { position: 'sidebar' },
     },
   ],
 }

@@ -170,10 +170,6 @@ export interface Media {
 export interface BlogPost {
   id: number;
   title: string;
-  /**
-   * 留空时自动从标题生成（仅新建时）
-   */
-  slug: string;
   excerpt?: string | null;
   content?: {
     root: {
@@ -192,15 +188,12 @@ export interface BlogPost {
   } | null;
   contentHtml?: string | null;
   coverImage?: (number | null) | Media;
-  author?: string | null;
-  publishDate?: string | null;
   tags?:
     | {
         tag: string;
         id?: string | null;
       }[]
     | null;
-  status: 'draft' | 'published';
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -209,6 +202,13 @@ export interface BlogPost {
      */
     image?: (number | null) | Media;
   };
+  status: 'draft' | 'published';
+  /**
+   * 留空时自动从标题生成（仅新建时）
+   */
+  slug: string;
+  publishDate?: string | null;
+  author?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -219,10 +219,6 @@ export interface BlogPost {
 export interface DocPage {
   id: number;
   title: string;
-  /**
-   * 留空时自动从标题生成（仅新建时）
-   */
-  slug: string;
   content?: {
     root: {
       type: string;
@@ -239,12 +235,6 @@ export interface DocPage {
     [k: string]: unknown;
   } | null;
   contentHtml?: string | null;
-  /**
-   * 侧边栏排序，数字越小越靠前
-   */
-  sidebarOrder?: number | null;
-  relatedProduct?: ('shield' | 'audience-recovery' | 'reflow-link' | 're-engagement' | 'pwa-install') | null;
-  status: 'draft' | 'published';
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -253,6 +243,16 @@ export interface DocPage {
      */
     image?: (number | null) | Media;
   };
+  status: 'draft' | 'published';
+  /**
+   * 留空时自动从标题生成（仅新建时）
+   */
+  slug: string;
+  /**
+   * 侧边栏排序，数字越小越靠前
+   */
+  sidebarOrder?: number | null;
+  relatedProduct?: ('shield' | 'audience-recovery' | 'reflow-link' | 're-engagement' | 'pwa-install') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -382,20 +382,16 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface BlogPostsSelect<T extends boolean = true> {
   title?: T;
-  slug?: T;
   excerpt?: T;
   content?: T;
   contentHtml?: T;
   coverImage?: T;
-  author?: T;
-  publishDate?: T;
   tags?:
     | T
     | {
         tag?: T;
         id?: T;
       };
-  status?: T;
   meta?:
     | T
     | {
@@ -403,6 +399,10 @@ export interface BlogPostsSelect<T extends boolean = true> {
         description?: T;
         image?: T;
       };
+  status?: T;
+  slug?: T;
+  publishDate?: T;
+  author?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -412,12 +412,8 @@ export interface BlogPostsSelect<T extends boolean = true> {
  */
 export interface DocPagesSelect<T extends boolean = true> {
   title?: T;
-  slug?: T;
   content?: T;
   contentHtml?: T;
-  sidebarOrder?: T;
-  relatedProduct?: T;
-  status?: T;
   meta?:
     | T
     | {
@@ -425,6 +421,10 @@ export interface DocPagesSelect<T extends boolean = true> {
         description?: T;
         image?: T;
       };
+  status?: T;
+  slug?: T;
+  sidebarOrder?: T;
+  relatedProduct?: T;
   updatedAt?: T;
   createdAt?: T;
 }
