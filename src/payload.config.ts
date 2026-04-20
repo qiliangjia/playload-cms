@@ -63,7 +63,7 @@ export default buildConfig({
   },
   i18n: {
     supportedLanguages: { en, zh },
-    fallbackLanguage: 'en',
+    fallbackLanguage: 'zh',
   },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
