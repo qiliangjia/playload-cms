@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload'
-import { convertLexicalToHTML, defaultHTMLConverters } from '@payloadcms/richtext-lexical'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 const triggerDeploy = () => {
   const url = process.env.CF_PAGES_DEPLOY_HOOK_URL
@@ -24,13 +24,10 @@ export const DocPages: CollectionConfig = {
       },
     ],
     afterRead: [
-      async ({ doc }) => {
+      ({ doc }) => {
         if (doc.content) {
           try {
-            doc.contentHtml = await convertLexicalToHTML({
-              converters: defaultHTMLConverters,
-              data: doc.content,
-            })
+            doc.contentHtml = convertLexicalToHTML({ data: doc.content })
           } catch {
             doc.contentHtml = ''
           }
