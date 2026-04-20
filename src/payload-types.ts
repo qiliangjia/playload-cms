@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    blogPosts: BlogPost;
+    docPages: DocPage;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +80,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    blogPosts: BlogPostsSelect<false> | BlogPostsSelect<true>;
+    docPages: DocPagesSelect<false> | DocPagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -86,10 +90,10 @@ export interface Config {
   db: {
     defaultIDType: number;
   };
-  fallbackLocale: null;
+  fallbackLocale: ('false' | 'none' | 'null') | false | null | ('en' | 'zh-CN') | ('en' | 'zh-CN')[];
   globals: {};
   globalsSelect: {};
-  locale: null;
+  locale: 'en' | 'zh-CN';
   widgets: {
     collections: CollectionsWidget;
   };
@@ -161,6 +165,99 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "blogPosts".
+ */
+export interface BlogPost {
+  id: number;
+  title: string;
+  /**
+   * 留空时自动从标题生成（仅新建时）
+   */
+  slug: string;
+  excerpt?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  contentHtml?: string | null;
+  coverImage?: (number | null) | Media;
+  author?: string | null;
+  publishDate?: string | null;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  status: 'draft' | 'published';
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docPages".
+ */
+export interface DocPage {
+  id: number;
+  title: string;
+  /**
+   * 留空时自动从标题生成（仅新建时）
+   */
+  slug: string;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  contentHtml?: string | null;
+  /**
+   * 侧边栏排序，数字越小越靠前
+   */
+  sidebarOrder?: number | null;
+  relatedProduct?: ('shield' | 'audience-recovery' | 'reflow-link' | 're-engagement' | 'pwa-install') | null;
+  status: 'draft' | 'published';
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -190,6 +287,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'blogPosts';
+        value: number | BlogPost;
+      } | null)
+    | ({
+        relationTo: 'docPages';
+        value: number | DocPage;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -270,6 +375,58 @@ export interface MediaSelect<T extends boolean = true> {
   filesize?: T;
   width?: T;
   height?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "blogPosts_select".
+ */
+export interface BlogPostsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  content?: T;
+  contentHtml?: T;
+  coverImage?: T;
+  author?: T;
+  publishDate?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  status?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docPages_select".
+ */
+export interface DocPagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  content?: T;
+  contentHtml?: T;
+  sidebarOrder?: T;
+  relatedProduct?: T;
+  status?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
