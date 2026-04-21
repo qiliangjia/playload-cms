@@ -13,8 +13,10 @@ import { zh } from '@payloadcms/translations/languages/zh'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Authors } from './collections/Authors'
 import { BlogPosts } from './collections/BlogPosts'
 import { DocPages } from './collections/DocPages'
+import { markdownToLexical } from './endpoints/markdownToLexical'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -55,7 +57,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, BlogPosts, DocPages],
+  collections: [Users, Media, Authors, BlogPosts, DocPages],
+  endpoints: [markdownToLexical],
   localization: {
     locales: ['en', 'zh-CN'],
     defaultLocale: 'en',

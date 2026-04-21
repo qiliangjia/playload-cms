@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+import { buildPreviewUrl } from '../lib/previewUrl'
 
 const triggerDeploy = () => {
   const url = process.env.CF_PAGES_DEPLOY_HOOK_URL
@@ -9,7 +10,15 @@ const triggerDeploy = () => {
 
 export const BlogPosts: CollectionConfig = {
   slug: 'blogPosts',
-  admin: { useAsTitle: 'title' },
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'status', 'slug', 'previewUrl', 'updatedAt'],
+    components: {
+      edit: {
+        beforeDocumentControls: ['/components/MarkdownImportButton#MarkdownImportButton'],
+      },
+    },
+  },
   access: { read: () => true },
   hooks: {
     beforeChange: [
@@ -35,6 +44,7 @@ export const BlogPosts: CollectionConfig = {
         } else {
           doc.contentHtml = ''
         }
+        doc.previewUrl = buildPreviewUrl('blog', doc.status, doc.slug) ?? ''
         return doc
       },
     ],
@@ -120,17 +130,23 @@ export const BlogPosts: CollectionConfig = {
       },
     },
     {
-      name: 'publishDate',
-      type: 'date',
-      admin: {
-        position: 'sidebar',
-        date: { pickerAppearance: 'dayAndTime' },
-      },
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'authors',
+      admin: { position: 'sidebar' },
     },
     {
-      name: 'author',
+      name: 'previewUrl',
       type: 'text',
-      admin: { position: 'sidebar' },
+      virtual: true,
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: '按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境',
+        components: {
+          Cell: '/components/PreviewUrlCell#PreviewUrlCell',
+        },
+      },
     },
   ],
 }

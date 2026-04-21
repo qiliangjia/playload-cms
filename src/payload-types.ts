@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    authors: Author;
     blogPosts: BlogPost;
     docPages: DocPage;
     'payload-kv': PayloadKv;
@@ -80,6 +81,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    authors: AuthorsSelect<false> | AuthorsSelect<true>;
     blogPosts: BlogPostsSelect<false> | BlogPostsSelect<true>;
     docPages: DocPagesSelect<false> | DocPagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -165,6 +167,17 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  name: string;
+  avatar?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogPosts".
  */
 export interface BlogPost {
@@ -207,8 +220,11 @@ export interface BlogPost {
    * 留空时自动从标题生成（仅新建时）
    */
   slug: string;
-  publishDate?: string | null;
-  author?: string | null;
+  author?: (number | null) | Author;
+  /**
+   * 按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境
+   */
+  previewUrl?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -253,6 +269,10 @@ export interface DocPage {
    */
   sidebarOrder?: number | null;
   relatedProduct?: ('shield' | 'audience-recovery' | 'reflow-link' | 're-engagement' | 'pwa-install') | null;
+  /**
+   * 按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境
+   */
+  previewUrl?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -287,6 +307,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'authors';
+        value: number | Author;
       } | null)
     | ({
         relationTo: 'blogPosts';
@@ -378,6 +402,16 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  avatar?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogPosts_select".
  */
 export interface BlogPostsSelect<T extends boolean = true> {
@@ -401,8 +435,8 @@ export interface BlogPostsSelect<T extends boolean = true> {
       };
   status?: T;
   slug?: T;
-  publishDate?: T;
   author?: T;
+  previewUrl?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -425,6 +459,7 @@ export interface DocPagesSelect<T extends boolean = true> {
   slug?: T;
   sidebarOrder?: T;
   relatedProduct?: T;
+  previewUrl?: T;
   updatedAt?: T;
   createdAt?: T;
 }

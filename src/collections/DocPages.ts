@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+import { buildPreviewUrl } from '../lib/previewUrl'
 
 const triggerDeploy = () => {
   const url = process.env.CF_PAGES_DEPLOY_HOOK_URL
@@ -9,7 +10,15 @@ const triggerDeploy = () => {
 
 export const DocPages: CollectionConfig = {
   slug: 'docPages',
-  admin: { useAsTitle: 'title' },
+  admin: {
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'status', 'slug', 'previewUrl', 'updatedAt'],
+    components: {
+      edit: {
+        beforeDocumentControls: ['/components/MarkdownImportButton#MarkdownImportButton'],
+      },
+    },
+  },
   access: { read: () => true },
   hooks: {
     beforeChange: [
@@ -34,6 +43,7 @@ export const DocPages: CollectionConfig = {
         } else {
           doc.contentHtml = ''
         }
+        doc.previewUrl = buildPreviewUrl('doc', doc.status, doc.slug) ?? ''
         return doc
       },
     ],
@@ -117,6 +127,19 @@ export const DocPages: CollectionConfig = {
         { label: 'PWA Install', value: 'pwa-install' },
       ],
       admin: { position: 'sidebar' },
+    },
+    {
+      name: 'previewUrl',
+      type: 'text',
+      virtual: true,
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: '按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境',
+        components: {
+          Cell: '/components/PreviewUrlCell#PreviewUrlCell',
+        },
+      },
     },
   ],
 }
