@@ -3,6 +3,7 @@ import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildPreviewUrl } from '../lib/previewUrl'
 import { triggerDeploy } from '../lib/triggerDeploy'
+import { normalizeSlug } from '../lib/slug'
 import { MarkdownImportFeature } from '../features/markdownImport/feature.server'
 
 export const BlogPosts: CollectionConfig = {
@@ -19,14 +20,8 @@ export const BlogPosts: CollectionConfig = {
   access: { read: () => true },
   hooks: {
     beforeChange: [
-      ({ data, operation }) => {
-        // auto-slugify title → slug when slug is empty on create
-        if (operation === 'create' && data.title && !data.slug) {
-          data.slug = data.title
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '')
-        }
+      ({ data }) => {
+        normalizeSlug(data)
         return data
       },
     ],
@@ -126,7 +121,7 @@ export const BlogPosts: CollectionConfig = {
       index: true,
       admin: {
         position: 'sidebar',
-        description: '留空时自动从标题生成（仅新建时）',
+        description: '只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成',
       },
     },
     {
