@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildPreviewUrl } from '../lib/previewUrl'
+import { MarkdownImportFeature } from '../features/markdownImport/feature.server'
 
 const triggerDeploy = () => {
   const url = process.env.CF_PAGES_DEPLOY_HOOK_URL
@@ -75,6 +77,9 @@ export const DocPages: CollectionConfig = {
               name: 'content',
               type: 'richText',
               localized: true,
+              editor: lexicalEditor({
+                features: ({ defaultFeatures }) => [...defaultFeatures, MarkdownImportFeature()],
+              }),
             },
             {
               name: 'contentHtml',

@@ -4,12 +4,13 @@ import React, { useCallback, useState } from 'react'
 import { Button, Modal, useField, useModal } from '@payloadcms/ui'
 
 const MODAL_SLUG = 'markdown-import-modal'
+const EVENT_NAME = 'deepclick:md-import'
 
 type ContentFieldValue = Record<string, unknown> | undefined
 
 export const MarkdownImportButton: React.FC = () => {
   const { openModal, closeModal } = useModal()
-  const { value, setValue } = useField<ContentFieldValue>({ path: 'content' })
+  const { value } = useField<ContentFieldValue>({ path: 'content' })
 
   const [markdown, setMarkdown] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,12 +60,20 @@ export const MarkdownImportButton: React.FC = () => {
     }
   }, [markdown])
 
+  const dispatchImport = useCallback((state: Record<string, unknown>) => {
+    window.dispatchEvent(
+      new CustomEvent(EVENT_NAME, {
+        detail: { state, fieldPath: 'content' },
+      }),
+    )
+  }, [])
+
   const handleReplace = useCallback(async () => {
     const lexical = await convert()
     if (!lexical) return
-    setValue(lexical)
+    dispatchImport(lexical)
     handleClose()
-  }, [convert, setValue, handleClose])
+  }, [convert, dispatchImport, handleClose])
 
   const handleAppend = useCallback(async () => {
     const lexical = await convert()
@@ -78,9 +87,9 @@ export const MarkdownImportButton: React.FC = () => {
         children: [...(currentRoot?.children ?? []), ...(nextRoot?.children ?? [])],
       },
     }
-    setValue(merged)
+    dispatchImport(merged)
     handleClose()
-  }, [convert, setValue, value, handleClose])
+  }, [convert, dispatchImport, value, handleClose])
 
   return (
     <React.Fragment>
@@ -104,8 +113,7 @@ export const MarkdownImportButton: React.FC = () => {
         >
           <h3 style={{ margin: 0 }}>从 Markdown 导入</h3>
           <p style={{ margin: 0, color: 'var(--theme-elevation-600)', fontSize: 13 }}>
-            将 Markdown 内容粘贴到下方，按“替换”覆盖当前内容，按“追加”插入到末尾。
-            导入后会写入当前语言环境 ({'\u200B'}locale 由顶部切换器决定{'\u200B'}).
+            将 Markdown 粘贴到下方。导入会写入当前语言环境 (locale 由顶部切换器决定)。
           </p>
           <textarea
             value={markdown}
