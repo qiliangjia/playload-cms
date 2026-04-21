@@ -2,13 +2,8 @@ import type { CollectionConfig } from 'payload'
 import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildPreviewUrl } from '../lib/previewUrl'
+import { triggerDeploy } from '../lib/triggerDeploy'
 import { MarkdownImportFeature } from '../features/markdownImport/feature.server'
-
-const triggerDeploy = () => {
-  const url = process.env.CF_PAGES_DEPLOY_HOOK_URL
-  if (!url) return
-  fetch(url, { method: 'POST' }).catch(() => {})
-}
 
 export const BlogPosts: CollectionConfig = {
   slug: 'blogPosts',
@@ -51,13 +46,13 @@ export const BlogPosts: CollectionConfig = {
       },
     ],
     afterChange: [
-      () => {
-        triggerDeploy()
+      ({ doc, previousDoc }) => {
+        triggerDeploy(doc?.status, previousDoc?.status)
       },
     ],
     afterDelete: [
-      () => {
-        triggerDeploy()
+      ({ doc }) => {
+        triggerDeploy(doc?.status, doc?.status)
       },
     ],
   },
