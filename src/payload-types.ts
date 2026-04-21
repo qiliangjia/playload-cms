@@ -221,6 +221,11 @@ export interface BlogPost {
    */
   slug: string;
   author?: (number | null) | Author;
+  category: 'brand-news' | 'product-tutorial' | 'industry-info' | 'going-global-events';
+  /**
+   * 勾选后会出现在博客首页大 Hero 位（建议同时只勾一篇）
+   */
+  featured?: boolean | null;
   /**
    * 按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境
    */
@@ -436,6 +441,8 @@ export interface BlogPostsSelect<T extends boolean = true> {
   status?: T;
   slug?: T;
   author?: T;
+  category?: T;
+  featured?: T;
   previewUrl?: T;
   updatedAt?: T;
   createdAt?: T;

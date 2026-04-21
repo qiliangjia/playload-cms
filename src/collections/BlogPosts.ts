@@ -141,6 +141,37 @@ export const BlogPosts: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     {
+      name: 'category',
+      type: 'select',
+      required: true,
+      defaultValue: 'industry-info',
+      options: [
+        { label: { en: 'Brand News', 'zh-CN': '品牌新闻' }, value: 'brand-news' },
+        {
+          label: { en: 'Product Tutorial', 'zh-CN': '产品教程' },
+          value: 'product-tutorial',
+        },
+        {
+          label: { en: 'Industry Info', 'zh-CN': '行业信息' },
+          value: 'industry-info',
+        },
+        {
+          label: { en: 'Going-Global Events', 'zh-CN': '出海活动' },
+          value: 'going-global-events',
+        },
+      ],
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'featured',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: '勾选后会出现在博客首页大 Hero 位（建议同时只勾一篇）',
+      },
+    },
+    {
       name: 'previewUrl',
       type: 'text',
       virtual: true,
