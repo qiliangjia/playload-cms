@@ -41,13 +41,13 @@ export const DocPages: CollectionConfig = {
       },
     ],
     afterChange: [
-      ({ doc, previousDoc }) => {
-        triggerDeploy(doc?.status, previousDoc?.status)
+      async ({ doc, previousDoc }) => {
+        await triggerDeploy(doc?.status, previousDoc?.status)
       },
     ],
     afterDelete: [
-      ({ doc }) => {
-        triggerDeploy(doc?.status, doc?.status)
+      async ({ doc }) => {
+        await triggerDeploy(doc?.status, doc?.status)
       },
     ],
   },
