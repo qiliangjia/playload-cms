@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { lexicalEditor, EXPERIMENTAL_TableFeature } from '@payloadcms/richtext-lexical'
 import { buildPreviewUrl } from '../lib/previewUrl'
 import { triggerDeploy } from '../lib/triggerDeploy'
 import { normalizeSlug } from '../lib/slug'
@@ -74,7 +74,11 @@ export const BlogPosts: CollectionConfig = {
               type: 'richText',
               localized: true,
               editor: lexicalEditor({
-                features: ({ defaultFeatures }) => [...defaultFeatures, MarkdownImportFeature()],
+                features: ({ defaultFeatures }) => [
+                  ...defaultFeatures,
+                  EXPERIMENTAL_TableFeature(),
+                  MarkdownImportFeature(),
+                ],
               }),
             },
             {

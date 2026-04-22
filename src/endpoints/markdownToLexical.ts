@@ -2,8 +2,17 @@ import type { Endpoint } from 'payload'
 import {
   convertMarkdownToLexical,
   defaultEditorConfig,
+  defaultEditorFeatures,
+  EXPERIMENTAL_TableFeature,
   sanitizeServerEditorConfig,
 } from '@payloadcms/richtext-lexical'
+
+// Use defaultEditorConfig with the table feature added so GFM tables
+// (`| a | b |`) are parsed into lexical table nodes on import.
+const importEditorConfig = {
+  ...defaultEditorConfig,
+  features: [...defaultEditorFeatures, EXPERIMENTAL_TableFeature()],
+}
 
 export const markdownToLexical: Endpoint = {
   method: 'post',
@@ -25,7 +34,7 @@ export const markdownToLexical: Endpoint = {
       return Response.json({ error: 'markdown required' }, { status: 400 })
     }
 
-    const editorConfig = await sanitizeServerEditorConfig(defaultEditorConfig, req.payload.config)
+    const editorConfig = await sanitizeServerEditorConfig(importEditorConfig, req.payload.config)
     const lexical = convertMarkdownToLexical({ editorConfig, markdown })
 
     return Response.json({ lexical })
