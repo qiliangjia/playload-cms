@@ -29,7 +29,7 @@ export const BlogPosts: CollectionConfig = {
       },
     ],
     afterRead: [
-      ({ doc }) => {
+      ({ doc, req }) => {
         if (doc.content) {
           try {
             doc.contentHtml = convertLexicalToHTML({ data: doc.content })
@@ -39,7 +39,7 @@ export const BlogPosts: CollectionConfig = {
         } else {
           doc.contentHtml = ''
         }
-        doc.previewUrl = buildPreviewUrl('blog', doc.status, doc.slug) ?? ''
+        doc.previewUrl = buildPreviewUrl('blog', doc.status, doc.slug, req?.locale) ?? ''
         return doc
       },
     ],
