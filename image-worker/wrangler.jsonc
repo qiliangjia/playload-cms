@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cms-image-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "playload-cms"
+    }
+  ]
+  // 部署时绑定自定义域名，把 cms-r2.deepclick.com 从 R2 public 解绑，
+  // 改成路由到本 worker：
+  // "routes": [
+  //   { "pattern": "cms-r2.deepclick.com/*", "zone_name": "deepclick.com" }
+  // ]
+}

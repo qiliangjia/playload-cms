@@ -10,10 +10,11 @@ export const BlogPosts: CollectionConfig = {
   slug: 'blogPosts',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'slug', 'previewUrl', 'updatedAt'],
+    defaultColumns: ['coverImage', 'title', 'status', 'slug', 'previewUrl', 'updatedAt'],
     // Only show docs that have a title in the currently selected admin locale.
     // Posts created in `en` won't pollute the `zh-CN` list and vice versa.
     baseFilter: () => ({ title: { exists: true } }),
+    preview: (doc, { req }) => buildPreviewUrl('blog', doc.status, doc.slug, req.locale) ?? null,
     components: {
       edit: {
         beforeDocumentControls: ['/components/MarkdownImportButton#MarkdownImportButton'],
@@ -100,6 +101,11 @@ export const BlogPosts: CollectionConfig = {
               type: 'upload',
               relationTo: 'media',
               required: true,
+              admin: {
+                components: {
+                  Cell: '/components/CoverImageCell#CoverImageCell',
+                },
+              },
             },
             {
               name: 'tags',

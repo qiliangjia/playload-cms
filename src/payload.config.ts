@@ -78,7 +78,18 @@ export default buildConfig({
   plugins: [
     r2Storage({
       bucket: cloudflare.env.R2,
-      collections: { media: true },
+      collections: {
+        media: {
+          // 让 Payload 直接返回 R2 自定义域名下的 URL（由图片 Worker 代理）
+          // 而不是走 /api/media/file/<filename> 这个 Payload 内部路由
+          disablePayloadAccessControl: true,
+          generateFileURL: ({ filename, prefix }) => {
+            const base = process.env.R2_PUBLIC_BASE_URL || 'https://cms-r2.deepclick.com'
+            const key = prefix ? `${prefix}/${filename}` : filename
+            return `${base}/${key}`
+          },
+        },
+      },
     }),
     seoPlugin({
       collections: ['blogPosts'],
