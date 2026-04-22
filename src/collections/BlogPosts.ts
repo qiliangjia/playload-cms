@@ -10,7 +10,15 @@ export const BlogPosts: CollectionConfig = {
   slug: 'blogPosts',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['coverImage', 'title', 'status', 'slug', 'previewUrl', 'updatedAt'],
+    defaultColumns: [
+      'title',
+      'coverImage',
+      'category',
+      'status',
+      'slug',
+      'previewUrl',
+      'updatedAt',
+    ],
     // Only show docs that have a title in the currently selected admin locale.
     // Posts created in `en` won't pollute the `zh-CN` list and vice versa.
     baseFilter: () => ({ title: { exists: true } }),
