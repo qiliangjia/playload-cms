@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     media: Media;
     authors: Author;
+    categories: Category;
     blogPosts: BlogPost;
     docPages: DocPage;
     'payload-kv': PayloadKv;
@@ -82,6 +83,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
     blogPosts: BlogPostsSelect<false> | BlogPostsSelect<true>;
     docPages: DocPagesSelect<false> | DocPagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -178,6 +180,24 @@ export interface Author {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  title: string;
+  /**
+   * 只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成
+   */
+  slug: string;
+  /**
+   * 数字越小越靠前
+   */
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogPosts".
  */
 export interface BlogPost {
@@ -217,11 +237,18 @@ export interface BlogPost {
   };
   status: 'draft' | 'published';
   /**
-   * 留空时自动从标题生成（仅新建时）
+   * 只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成
    */
   slug: string;
   author?: (number | null) | Author;
-  category: 'brand-news' | 'product-tutorial' | 'industry-info' | 'going-global-events';
+  /**
+   * 必填，分类在 Categories collection 中维护
+   */
+  category: number | Category;
+  /**
+   * 前台展示的发布日期，为空时回退到创建时间
+   */
+  publishDate?: string | null;
   /**
    * 勾选后会出现在博客首页大 Hero 位（建议同时只勾一篇）
    */
@@ -266,7 +293,7 @@ export interface DocPage {
   };
   status: 'draft' | 'published';
   /**
-   * 留空时自动从标题生成（仅新建时）
+   * 只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成
    */
   slug: string;
   /**
@@ -316,6 +343,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'authors';
         value: number | Author;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
       } | null)
     | ({
         relationTo: 'blogPosts';
@@ -417,6 +448,17 @@ export interface AuthorsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogPosts_select".
  */
 export interface BlogPostsSelect<T extends boolean = true> {
@@ -442,6 +484,7 @@ export interface BlogPostsSelect<T extends boolean = true> {
   slug?: T;
   author?: T;
   category?: T;
+  publishDate?: T;
   featured?: T;
   previewUrl?: T;
   updatedAt?: T;

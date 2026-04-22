@@ -132,25 +132,22 @@ export const BlogPosts: CollectionConfig = {
     },
     {
       name: 'category',
-      type: 'select',
+      type: 'relationship',
+      relationTo: 'categories',
       required: true,
-      defaultValue: 'industry-info',
-      options: [
-        { label: { en: 'Brand News', 'zh-CN': '品牌新闻' }, value: 'brand-news' },
-        {
-          label: { en: 'Product Tutorial', 'zh-CN': '产品教程' },
-          value: 'product-tutorial',
-        },
-        {
-          label: { en: 'Industry Info', 'zh-CN': '行业信息' },
-          value: 'industry-info',
-        },
-        {
-          label: { en: 'Going-Global Events', 'zh-CN': '出海活动' },
-          value: 'going-global-events',
-        },
-      ],
-      admin: { position: 'sidebar' },
+      admin: {
+        position: 'sidebar',
+        description: '必填，分类在 Categories collection 中维护',
+      },
+    },
+    {
+      name: 'publishDate',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly', displayFormat: 'yyyy-MM-dd' },
+        description: '前台展示的发布日期，为空时回退到创建时间',
+      },
     },
     {
       name: 'featured',
