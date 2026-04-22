@@ -11,6 +11,9 @@ export const BlogPosts: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'slug', 'previewUrl', 'updatedAt'],
+    // Only show docs that have a title in the currently selected admin locale.
+    // Posts created in `en` won't pollute the `zh-CN` list and vice versa.
+    baseFilter: () => ({ title: { exists: true } }),
     components: {
       edit: {
         beforeDocumentControls: ['/components/MarkdownImportButton#MarkdownImportButton'],

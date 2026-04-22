@@ -6,6 +6,7 @@ export const Categories: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'order', 'updatedAt'],
+    baseFilter: () => ({ title: { exists: true } }),
   },
   access: { read: () => true },
   hooks: {
