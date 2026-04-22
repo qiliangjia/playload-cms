@@ -182,7 +182,8 @@ export interface Author {
  */
 export interface Category {
   id: number;
-  title: string;
+  titleZh: string;
+  titleEn: string;
   /**
    * 只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成
    */
@@ -218,7 +219,7 @@ export interface BlogPost {
     [k: string]: unknown;
   } | null;
   contentHtml?: string | null;
-  coverImage?: (number | null) | Media;
+  coverImage: number | Media;
   tags?:
     | {
         tag: string;
@@ -397,7 +398,8 @@ export interface AuthorsSelect<T extends boolean = true> {
  * via the `definition` "categories_select".
  */
 export interface CategoriesSelect<T extends boolean = true> {
-  title?: T;
+  titleZh?: T;
+  titleEn?: T;
   slug?: T;
   order?: T;
   updatedAt?: T;
