@@ -16,7 +16,6 @@ import { Media } from './collections/Media'
 import { Authors } from './collections/Authors'
 import { Categories } from './collections/Categories'
 import { BlogPosts } from './collections/BlogPosts'
-import { DocPages } from './collections/DocPages'
 import { markdownToLexical } from './endpoints/markdownToLexical'
 
 const filename = fileURLToPath(import.meta.url)
@@ -58,7 +57,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Authors, Categories, BlogPosts, DocPages],
+  collections: [Users, Media, Authors, Categories, BlogPosts],
   endpoints: [markdownToLexical],
   localization: {
     locales: ['en', 'zh-CN'],
@@ -82,7 +81,7 @@ export default buildConfig({
       collections: { media: true },
     }),
     seoPlugin({
-      collections: ['blogPosts', 'docPages'],
+      collections: ['blogPosts'],
       uploadsCollection: 'media',
       tabbedUI: true,
       generateTitle: ({ doc }) => (doc.title as string) ?? '',

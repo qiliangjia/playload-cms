@@ -72,7 +72,6 @@ export interface Config {
     authors: Author;
     categories: Category;
     blogPosts: BlogPost;
-    docPages: DocPage;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -85,7 +84,6 @@ export interface Config {
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     blogPosts: BlogPostsSelect<false> | BlogPostsSelect<true>;
-    docPages: DocPagesSelect<false> | DocPagesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -262,54 +260,6 @@ export interface BlogPost {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "docPages".
- */
-export interface DocPage {
-  id: number;
-  title: string;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  contentHtml?: string | null;
-  meta?: {
-    title?: string | null;
-    description?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-  };
-  status: 'draft' | 'published';
-  /**
-   * 只能包含 a-z、0-9、短横线；保存时会自动规范化。留空则从标题生成
-   */
-  slug: string;
-  /**
-   * 侧边栏排序，数字越小越靠前
-   */
-  sidebarOrder?: number | null;
-  relatedProduct?: ('shield' | 'audience-recovery' | 'reflow-link' | 're-engagement' | 'pwa-install') | null;
-  /**
-   * 按状态 + slug 拼接：draft 指向测试环境，published 指向生产环境
-   */
-  previewUrl?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -351,10 +301,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'blogPosts';
         value: number | BlogPost;
-      } | null)
-    | ({
-        relationTo: 'docPages';
-        value: number | DocPage;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -486,29 +432,6 @@ export interface BlogPostsSelect<T extends boolean = true> {
   category?: T;
   publishDate?: T;
   featured?: T;
-  previewUrl?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "docPages_select".
- */
-export interface DocPagesSelect<T extends boolean = true> {
-  title?: T;
-  content?: T;
-  contentHtml?: T;
-  meta?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        image?: T;
-      };
-  status?: T;
-  slug?: T;
-  sidebarOrder?: T;
-  relatedProduct?: T;
   previewUrl?: T;
   updatedAt?: T;
   createdAt?: T;
