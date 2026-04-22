@@ -4,9 +4,8 @@ import { normalizeSlug } from '../lib/slug'
 export const Categories: CollectionConfig = {
   slug: 'categories',
   admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'order', 'updatedAt'],
-    baseFilter: () => ({ title: { exists: true } }),
+    useAsTitle: 'titleZh',
+    defaultColumns: ['titleZh', 'titleEn', 'slug', 'order', 'updatedAt'],
   },
   access: { read: () => true },
   hooks: {
@@ -19,10 +18,16 @@ export const Categories: CollectionConfig = {
   },
   fields: [
     {
-      name: 'title',
+      name: 'titleZh',
       type: 'text',
       required: true,
-      localized: true,
+      label: '中文标题',
+    },
+    {
+      name: 'titleEn',
+      type: 'text',
+      required: true,
+      label: 'English title',
     },
     {
       name: 'slug',
