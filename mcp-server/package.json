@@ -1,0 +1,36 @@
+{
+  "name": "@deepclick/cms-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing the Payload CMS blog workflow to Claude Code",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "cms-mcp": "dist/bin/cms-mcp.js",
+    "cms": "dist/bin/cms.js"
+  },
+  "main": "dist/src/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/bin/cms-mcp.js",
+    "dev": "tsx bin/cms-mcp.ts",
+    "cli": "tsx bin/cms.ts",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "cac": "^6.7.14"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.9",
+    "tsx": "4.21.0",
+    "typescript": "5.7.3",
+    "vitest": "4.0.18"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
