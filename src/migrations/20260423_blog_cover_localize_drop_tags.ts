@@ -1,10 +1,20 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-d1-sqlite'
 
-// Idempotent: the first attempt to run this migration failed at the final
-// DROP COLUMN step (D1 SQLite refuses to drop a column that still has an
-// FK constraint), so the ADD COLUMN / CREATE INDEX / UPDATE / DROP INDEX
-// steps have already been committed on prod. Running again needs to be a
-// no-op for the prefix and succeed on the rest.
+// Localize blogPosts.coverImage and drop the unused tags field.
+//
+// Why we DON'T drop blog_posts.cover_image_id (the old shared column):
+// Cloudflare D1 enforces foreign_keys globally and ignores
+// `PRAGMA foreign_keys=OFF`, so the standard SQLite table-swap pattern
+// can't be made safe here — `DROP TABLE blog_posts` would cascade
+// through ON DELETE CASCADE on blog_posts_locales._parent_id and wipe
+// every localized post. We learned that the hard way: the first deploy
+// attempt did exactly that and had to be restored via D1 time travel.
+//
+// Leaving the column in place is harmless: Payload's drizzle schema,
+// generated from the collection config, no longer references
+// blog_posts.cover_image_id (coverImage is now `localized: true` and
+// lives under blog_posts_locales.cover_image_id). The orphan column
+// carries the pre-migration data but nobody reads it.
 
 async function columnExists(
   db: MigrateUpArgs['db'],
@@ -18,7 +28,8 @@ async function columnExists(
 }
 
 export async function up({ db }: MigrateUpArgs): Promise<void> {
-  // 1) Localize blogPosts.coverImage into blog_posts_locales.
+  // 1) Add the localized cover_image_id column to blog_posts_locales
+  //    (idempotent — earlier deploy attempts may have added it already).
   if (!(await columnExists(db, 'blog_posts_locales', 'cover_image_id'))) {
     await db.run(
       sql`ALTER TABLE \`blog_posts_locales\` ADD COLUMN \`cover_image_id\` integer REFERENCES \`media\`(\`id\`) ON UPDATE no action ON DELETE set null;`,
@@ -28,74 +39,35 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
     sql`CREATE INDEX IF NOT EXISTS \`blog_posts_locales_cover_image_idx\` ON \`blog_posts_locales\` (\`cover_image_id\`);`,
   )
 
-  // Only seed rows that still miss a cover. Safe to re-run — WHERE skips
-  // rows already populated on a prior attempt.
+  // 2) Seed every existing locale row with the previously-shared cover so
+  //    nothing loses its image. Only rows still missing a cover get
+  //    updated, so re-running is safe.
   await db.run(sql`UPDATE \`blog_posts_locales\`
     SET \`cover_image_id\` = (
       SELECT \`cover_image_id\` FROM \`blog_posts\` WHERE \`id\` = \`blog_posts_locales\`.\`_parent_id\`
     )
     WHERE \`cover_image_id\` IS NULL;`)
 
-  // 2) Drop blog_posts.cover_image_id via table swap. SQLite can't DROP
-  //    COLUMN on a column that still carries a FOREIGN KEY constraint,
-  //    and we MUST wrap the swap in PRAGMA foreign_keys=OFF/ON — otherwise
-  //    DROP TABLE blog_posts cascades through ON DELETE CASCADE on
-  //    blog_posts_locales._parent_id and wipes every translated post.
-  //    Same pattern as migrations/20260421_032944_authors_and_refactor.ts.
-  if (await columnExists(db, 'blog_posts', 'cover_image_id')) {
-    await db.run(sql`DROP INDEX IF EXISTS \`blog_posts_cover_image_idx\`;`)
-    await db.run(sql`PRAGMA foreign_keys=OFF;`)
-    await db.run(sql`CREATE TABLE \`__new_blog_posts\` (
-      \`id\` integer PRIMARY KEY NOT NULL,
-      \`status\` text DEFAULT 'draft' NOT NULL,
-      \`updated_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-      \`created_at\` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
-      \`author_id\` integer REFERENCES \`authors\`(\`id\`),
-      \`featured\` integer DEFAULT false,
-      \`category_id\` integer REFERENCES \`categories\`(\`id\`),
-      \`publish_date\` text
-    );`)
-    await db.run(sql`INSERT INTO \`__new_blog_posts\`
-      (\`id\`, \`status\`, \`updated_at\`, \`created_at\`, \`author_id\`, \`featured\`, \`category_id\`, \`publish_date\`)
-      SELECT \`id\`, \`status\`, \`updated_at\`, \`created_at\`, \`author_id\`, \`featured\`, \`category_id\`, \`publish_date\`
-      FROM \`blog_posts\`;`)
-    await db.run(sql`DROP TABLE \`blog_posts\`;`)
-    await db.run(sql`ALTER TABLE \`__new_blog_posts\` RENAME TO \`blog_posts\`;`)
-    await db.run(sql`PRAGMA foreign_keys=ON;`)
-    await db.run(
-      sql`CREATE INDEX \`blog_posts_updated_at_idx\` ON \`blog_posts\` (\`updated_at\`);`,
-    )
-    await db.run(
-      sql`CREATE INDEX \`blog_posts_created_at_idx\` ON \`blog_posts\` (\`created_at\`);`,
-    )
-    await db.run(sql`CREATE INDEX \`blog_posts_author_idx\` ON \`blog_posts\` (\`author_id\`);`)
-    await db.run(sql`CREATE INDEX \`blog_posts_category_idx\` ON \`blog_posts\` (\`category_id\`);`)
-  }
-
-  // 3) Drop the unused tags table.
+  // 3) Drop the unused tags table. DROP TABLE blog_posts_tags only
+  //    removes rows from blog_posts_tags itself — no other table has a
+  //    FK pointing at it, so there's no cascade concern.
   await db.run(sql`DROP TABLE IF EXISTS \`blog_posts_tags\`;`)
+
+  // NOTE: blog_posts.cover_image_id is intentionally left in place (see
+  // header comment). A future migration can remove it once a safe FK-
+  // detaching strategy is available on D1.
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {
-  // Restore shared cover_image_id. Prefer en's value when collapsing.
-  await db.run(
-    sql`ALTER TABLE \`blog_posts\` ADD COLUMN \`cover_image_id\` integer REFERENCES \`media\`(\`id\`) ON UPDATE no action ON DELETE set null;`,
-  )
-  await db.run(
-    sql`CREATE INDEX \`blog_posts_cover_image_idx\` ON \`blog_posts\` (\`cover_image_id\`);`,
-  )
-  await db.run(sql`UPDATE \`blog_posts\`
-    SET \`cover_image_id\` = COALESCE(
-      (SELECT \`cover_image_id\` FROM \`blog_posts_locales\`
-        WHERE \`_parent_id\` = \`blog_posts\`.\`id\` AND \`_locale\` = 'en'),
-      (SELECT \`cover_image_id\` FROM \`blog_posts_locales\`
-        WHERE \`_parent_id\` = \`blog_posts\`.\`id\` AND \`_locale\` = 'zh-CN')
-    );`)
-
+  // Drop the localized cover_image_id column. blog_posts_locales isn't
+  // referenced as a parent by any other table, so DROP COLUMN on a FK
+  // column is fine — SQLite 3.35+ supports it as long as nothing
+  // depends on the column.
   await db.run(sql`DROP INDEX IF EXISTS \`blog_posts_locales_cover_image_idx\`;`)
   await db.run(sql`ALTER TABLE \`blog_posts_locales\` DROP COLUMN \`cover_image_id\`;`)
 
-  // Recreate empty tags table (original values not recoverable).
+  // Recreate tags table (original data is lost — it was already 0 rows
+  // on prod at deploy time, so this is effectively a no-op for data).
   await db.run(sql`CREATE TABLE \`blog_posts_tags\` (
     \`_order\` integer NOT NULL,
     \`_parent_id\` integer NOT NULL,
