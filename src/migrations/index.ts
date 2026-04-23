@@ -5,6 +5,7 @@ import * as migration_20260421_061207_add_blog_category_featured from './2026042
 import * as migration_20260422_categories_and_publish_date from './20260422_categories_and_publish_date'
 import * as migration_20260422_114105_remove_doc_pages from './20260422_114105_remove_doc_pages'
 import * as migration_20260422_150734_flatten_category_locale from './20260422_150734_flatten_category_locale'
+import * as migration_20260422_mcp_oauth_codes from './20260422_mcp_oauth_codes'
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20260422_150734_flatten_category_locale.up,
     down: migration_20260422_150734_flatten_category_locale.down,
     name: '20260422_150734_flatten_category_locale',
+  },
+  {
+    up: migration_20260422_mcp_oauth_codes.up,
+    down: migration_20260422_mcp_oauth_codes.down,
+    name: '20260422_mcp_oauth_codes',
   },
 ]

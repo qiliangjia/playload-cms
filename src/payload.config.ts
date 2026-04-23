@@ -17,6 +17,7 @@ import { Authors } from './collections/Authors'
 import { Categories } from './collections/Categories'
 import { BlogPosts } from './collections/BlogPosts'
 import { markdownToLexical } from './endpoints/markdownToLexical'
+import { cmsMcpFromMarkdown } from './endpoints/cmsMcpFromMarkdown'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -58,7 +59,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Authors, Categories, BlogPosts],
-  endpoints: [markdownToLexical],
+  endpoints: [markdownToLexical, cmsMcpFromMarkdown],
   localization: {
     locales: ['en', 'zh-CN'],
     defaultLocale: 'en',
