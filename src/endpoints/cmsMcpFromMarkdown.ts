@@ -89,7 +89,7 @@ export const cmsMcpFromMarkdown: Endpoint = {
           data: {
             title: body.title,
             slug: body.slug,
-            content: lexical as unknown as Record<string, unknown>,
+            content: lexical as unknown as { [k: string]: unknown; root: { type: string; children: { [k: string]: unknown; type: string; version: number }[]; direction: 'ltr' | 'rtl'; format: '' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end'; indent: number; version: number } },
             category: body.category as number,
             coverImage: body.coverImageId as number,
             status: 'draft',

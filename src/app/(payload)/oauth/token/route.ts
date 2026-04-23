@@ -7,6 +7,7 @@ import {
   isAllowedRedirectUri,
   mintPayloadJwt,
   verifyPkceS256,
+  type OAuthCodeRow,
 } from '../../../../lib/oauth'
 
 const json = (body: unknown, status: number) =>
@@ -52,9 +53,9 @@ export async function POST(request: Request): Promise<Response> {
 
   const result = await consumeCode(payload, body.code)
   if (!result.ok) {
-    return json({ error: 'invalid_grant', detail: result.reason }, 400)
+    return json({ error: 'invalid_grant', detail: (result as { reason: string }).reason }, 400)
   }
-  const row = result.row
+  const row = (result as { row: OAuthCodeRow }).row
 
   if (row.redirect_uri !== body.redirect_uri) {
     return json({ error: 'invalid_grant', detail: 'redirect_uri_mismatch' }, 400)
