@@ -102,16 +102,12 @@ export const BlogPosts: CollectionConfig = {
               type: 'upload',
               relationTo: 'media',
               required: true,
+              localized: true,
               admin: {
                 components: {
                   Cell: '/components/CoverImageCell#CoverImageCell',
                 },
               },
-            },
-            {
-              name: 'tags',
-              type: 'array',
-              fields: [{ name: 'tag', type: 'text', required: true }],
             },
           ],
         },
