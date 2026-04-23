@@ -36,10 +36,15 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
     )
     WHERE \`cover_image_id\` IS NULL;`)
 
-  // 2) Drop blog_posts.cover_image_id via table swap (SQLite can't DROP
-  //    COLUMN on a column that still carries a FOREIGN KEY constraint).
+  // 2) Drop blog_posts.cover_image_id via table swap. SQLite can't DROP
+  //    COLUMN on a column that still carries a FOREIGN KEY constraint,
+  //    and we MUST wrap the swap in PRAGMA foreign_keys=OFF/ON — otherwise
+  //    DROP TABLE blog_posts cascades through ON DELETE CASCADE on
+  //    blog_posts_locales._parent_id and wipes every translated post.
+  //    Same pattern as migrations/20260421_032944_authors_and_refactor.ts.
   if (await columnExists(db, 'blog_posts', 'cover_image_id')) {
     await db.run(sql`DROP INDEX IF EXISTS \`blog_posts_cover_image_idx\`;`)
+    await db.run(sql`PRAGMA foreign_keys=OFF;`)
     await db.run(sql`CREATE TABLE \`__new_blog_posts\` (
       \`id\` integer PRIMARY KEY NOT NULL,
       \`status\` text DEFAULT 'draft' NOT NULL,
@@ -56,6 +61,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
       FROM \`blog_posts\`;`)
     await db.run(sql`DROP TABLE \`blog_posts\`;`)
     await db.run(sql`ALTER TABLE \`__new_blog_posts\` RENAME TO \`blog_posts\`;`)
+    await db.run(sql`PRAGMA foreign_keys=ON;`)
     await db.run(
       sql`CREATE INDEX \`blog_posts_updated_at_idx\` ON \`blog_posts\` (\`updated_at\`);`,
     )
