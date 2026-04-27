@@ -58,8 +58,19 @@ function buildR2Headers(object: R2Object): Headers {
   return headers
 }
 
+// HTTP 规范里 If-None-Match 的 ETag 必须带引号（可能还有 W/ 弱标记前缀）；
+// 但 R2 binding 的 onlyIf.etagDoesNotMatch 不接受引号，传引号会抛
+// "Conditional ETag should not be wrapped in quotes" 让整个请求 500。
+// 这里剥成裸 hash 再传给 R2。
+function parseConditionalEtag(header: string | null): string | undefined {
+  if (!header) return undefined
+  const first = header.split(',')[0].trim()
+  if (!first || first === '*') return undefined
+  return first.replace(/^W\//, '').replace(/^"(.*)"$/, '$1')
+}
+
 async function serveR2(env: Env, key: string, request: Request): Promise<Response> {
-  const ifNoneMatch = request.headers.get('if-none-match')
+  const ifNoneMatch = parseConditionalEtag(request.headers.get('if-none-match'))
   const object = await env.R2.get(key, {
     onlyIf: ifNoneMatch ? { etagDoesNotMatch: ifNoneMatch } : undefined,
   })
