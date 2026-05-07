@@ -1,9 +1,64 @@
 import type { CollectionConfig } from 'payload'
-import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+import {
+  convertLexicalToHTML,
+  LinkHTMLConverter,
+  type HTMLConvertersFunction,
+} from '@payloadcms/richtext-lexical/html'
 import { buildPreviewUrl } from '../lib/previewUrl'
 import { triggerDeploy } from '../lib/triggerDeploy'
 import { normalizeSlug } from '../lib/slug'
 import { blogPostsEditor } from '../features/blogPostsEditor'
+
+type BlogPostContent = Parameters<typeof convertLexicalToHTML>[0]['data']
+
+type InternalLinkDoc = {
+  relationTo?: unknown
+  value?: unknown
+}
+
+type InternalLinkNode = {
+  fields?: {
+    doc?: InternalLinkDoc
+  }
+}
+
+const buildBlogPostHref = (slug: unknown, locale?: unknown): string | undefined => {
+  if (typeof slug !== 'string' || !slug) return undefined
+  const localePrefix = locale === 'zh-CN' ? '/zh-CN' : ''
+  return `${localePrefix}/resources/blog/${encodeURIComponent(slug)}`
+}
+
+const internalDocToHref = (linkNode: InternalLinkNode, locale?: unknown): string => {
+  const doc = linkNode.fields?.doc
+  if (doc?.relationTo !== 'blogPosts') return '#'
+
+  const value = doc.value
+  const slug =
+    typeof value === 'object' && value !== null ? (value as { slug?: unknown }).slug : undefined
+
+  return buildBlogPostHref(slug, locale) ?? '#'
+}
+
+const blogPostHTMLConverters = (locale?: unknown): HTMLConvertersFunction => {
+  return ({ defaultConverters }) => ({
+    ...defaultConverters,
+    ...LinkHTMLConverter({
+      internalDocToHref: ({ linkNode }) => internalDocToHref(linkNode, locale),
+    }),
+  })
+}
+
+export const buildBlogPostContentHtml = (
+  content: BlogPostContent | null | undefined,
+  locale?: unknown,
+): string => {
+  if (!content) return ''
+
+  return convertLexicalToHTML({
+    converters: blogPostHTMLConverters(locale),
+    data: content,
+  })
+}
 
 export const BlogPosts: CollectionConfig = {
   slug: 'blogPosts',
@@ -40,7 +95,7 @@ export const BlogPosts: CollectionConfig = {
       ({ doc, req }) => {
         if (doc.content) {
           try {
-            doc.contentHtml = convertLexicalToHTML({ data: doc.content })
+            doc.contentHtml = buildBlogPostContentHtml(doc.content, req?.locale)
           } catch {
             doc.contentHtml = ''
           }
