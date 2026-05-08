@@ -17,6 +17,10 @@ interface Env {
   R2: R2Bucket
 }
 
+// Set on the cf.image subrequest so the loopback into this worker returns
+// raw R2 bytes instead of trying to transform again (which would recurse).
+const PASSTHROUGH_HEADER = 'x-image-passthrough'
+
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|svg|ico|bmp|tiff?)$/i
 
 const LIMITS = {
@@ -108,6 +112,11 @@ export default {
     const key = decodeURIComponent(path.replace(/^\//, ''))
     if (!key) return new Response('Not Found', { status: 404 })
 
+    // 自循环 subrequest（来自下方 cf.image 的 fetch）：直接回原图字节。
+    if (request.headers.has(PASSTHROUGH_HEADER)) {
+      return serveR2(env, key, request)
+    }
+
     // 非图片扩展名：直接从 R2 回源，不做优化
     if (!IMAGE_EXT.test(path)) {
       return serveR2(env, key, request)
@@ -120,11 +129,6 @@ export default {
       parseIntInRange(params.get('q'), LIMITS.minQuality, LIMITS.maxQuality) ??
       LIMITS.defaultQuality
     const formatParam = parseFormat(params.get('f'))
-
-    // 没有任何尺寸参数：走原图通道（还是经过 R2，但没 cf.image 开销）
-    if (!width && !height && !params.has('q') && !params.has('f')) {
-      return serveR2(env, key, request)
-    }
 
     let format: string | undefined
     if (formatParam === 'auto') {
@@ -141,25 +145,30 @@ export default {
     if (height) imageOpts.height = height
     if (format) imageOpts.format = format
 
-    // CF Image Resizing 只能对通过 fetch 拿到的 Response 做变换，
-    // 因此用 worker 自身域名 fetch 触发 subrequest；subrequest 会被
-    // 本 worker 识别为 "无参数" 分支，直接从 R2 回源原图。
-    // 再通过 cf.image 对这份原图做转换。
+    // CF Image Resizing 只能对 fetch 拿到的 Response 做变换。用 worker 自身域名
+    // fetch 触发 subrequest；带上 PASSTHROUGH_HEADER，本 worker 识别后直接回
+    // 原图，再交给 cf.image 转换。即使没有任何 query 参数，也走 auto-format
+    // 路径（让浏览器通过 Accept 拿到 webp/avif），避免 1MB+ 的 PNG 裸跑。
     const originUrl = `${url.origin}${url.pathname}`
 
     try {
       const response = await fetch(originUrl, {
         headers: {
           accept: request.headers.get('accept') || 'image/*',
+          [PASSTHROUGH_HEADER]: '1',
         },
         cf: { image: imageOpts },
       })
 
       if (!response.ok) {
-        return new Response(response.body, {
-          status: response.status,
-          headers: response.headers,
-        })
+        // 404 一直透传；其他错误（cf.image 限流/输入过大等）降级回原图。
+        if (response.status === 404) {
+          return new Response(response.body, {
+            status: 404,
+            headers: response.headers,
+          })
+        }
+        return serveR2(env, key, request)
       }
 
       const headers = new Headers(response.headers)
@@ -171,7 +180,7 @@ export default {
       return new Response(response.body, { status: 200, headers })
     } catch (err) {
       console.error('image transform failed:', err)
-      return new Response('Bad Gateway', { status: 502 })
+      return serveR2(env, key, request)
     }
   },
 }
