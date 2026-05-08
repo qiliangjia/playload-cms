@@ -1,3 +1,7 @@
+import crypto from 'node:crypto'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { ServerConfig } from '../src/config.js'
 import { PayloadClient, PayloadError } from '../src/payloadClient.js'
@@ -74,6 +78,63 @@ describe('PayloadClient', () => {
       status: 401,
       message: '401: Unauthorized',
     })
+  })
+
+  it('uploadMedia hashes content into the filename and reuses an existing doc', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cms-mcp-upload-'))
+    const file = path.join(dir, 'image.png')
+    const bytes = Buffer.from('hello-deepclick')
+    await fs.writeFile(file, bytes)
+    const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12)
+    const expectedFilename = `image-${hash}.png`
+
+    const calls: Array<{ url: string; method?: string }> = []
+    globalThis.fetch = vi.fn(async (url: URL | RequestInfo, init?: RequestInit) => {
+      const u = url instanceof URL ? url.toString() : String(url)
+      calls.push({ url: u, method: init?.method })
+      // Lookup hits before any POST; pretend the doc already exists.
+      return jsonResponse(200, {
+        docs: [{ id: 42, url: `https://cdn/${expectedFilename}` }],
+      })
+    }) as unknown as typeof fetch
+
+    const client = new PayloadClient(cfg, getToken)
+    const res = await client.uploadMedia(file)
+    expect(res).toEqual({ id: 42, url: `https://cdn/${expectedFilename}` })
+
+    // Only the lookup should have fired; no upload POST when reusing.
+    expect(calls).toHaveLength(1)
+    expect(calls[0].method).toBe('GET')
+    expect(calls[0].url).toContain(`where%5Bfilename%5D%5Bequals%5D=${expectedFilename}`)
+
+    await fs.rm(dir, { recursive: true, force: true })
+  })
+
+  it('uploadMedia uploads with the hashed filename when no existing doc matches', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cms-mcp-upload-'))
+    const file = path.join(dir, 'screenshot.png')
+    const bytes = Buffer.from('different-bytes')
+    await fs.writeFile(file, bytes)
+    const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12)
+    const expectedFilename = `screenshot-${hash}.png`
+
+    let postedFilename: string | undefined
+    globalThis.fetch = vi.fn(async (url: URL | RequestInfo, init?: RequestInit) => {
+      const u = url instanceof URL ? url.toString() : String(url)
+      if (init?.method === 'POST' && init.body instanceof FormData) {
+        const f = init.body.get('file') as File
+        postedFilename = f.name
+        return jsonResponse(201, { doc: { id: 99, url: `https://cdn/${expectedFilename}` } })
+      }
+      return jsonResponse(200, { docs: [] })
+    }) as unknown as typeof fetch
+
+    const client = new PayloadClient(cfg, getToken)
+    const res = await client.uploadMedia(file, 'alt text')
+    expect(res).toEqual({ id: 99, url: `https://cdn/${expectedFilename}` })
+    expect(postedFilename).toBe(expectedFilename)
+
+    await fs.rm(dir, { recursive: true, force: true })
   })
 
   it('returns PayloadError instance with status and body', async () => {
