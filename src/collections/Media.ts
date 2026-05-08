@@ -27,15 +27,35 @@ const splitName = (raw: string): { base: string; ext: string } => {
 //    only possible when the bytes are byte-identical (which is fine).
 // 2) With content-addressed keys, the worker's `Cache-Control: immutable`
 //    header is finally correct.
-const renameWithContentHash: CollectionBeforeOperationHook = async ({ args, operation }) => {
-  if (operation !== 'create') return args
-  const file = args?.req?.file
-  if (!file?.data || !file.name) return args
+const renameWithContentHash: CollectionBeforeOperationHook = async ({ args, operation, req }) => {
+  // Mutate via both args.req.file and req.file in case Payload reads from
+  // either reference downstream. They should be the same object.
+  const file = args?.req?.file ?? req?.file
+  if (operation !== 'create' || !file?.data || !file.name) {
+    console.log(
+      JSON.stringify({
+        msg: 'media:renameWithContentHash:skip',
+        operation,
+        hasFile: Boolean(file),
+        hasData: Boolean(file?.data),
+        name: file?.name ?? null,
+      }),
+    )
+    return args
+  }
 
   const hash = await computeContentHash(file.data as Buffer | Uint8Array)
   const { base, ext } = splitName(file.name)
   const cleanBase = base.replace(HASH_SUFFIX_RE, '') || 'image'
+  const original = file.name
   file.name = `${cleanBase}-${hash}${ext}`
+  console.log(
+    JSON.stringify({
+      msg: 'media:renameWithContentHash:applied',
+      original,
+      renamed: file.name,
+    }),
+  )
   return args
 }
 
