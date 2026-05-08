@@ -17,9 +17,16 @@ interface Env {
   R2: R2Bucket
 }
 
-// Set on the cf.image subrequest so the loopback into this worker returns
-// raw R2 bytes instead of trying to transform again (which would recurse).
-const PASSTHROUGH_HEADER = 'x-image-passthrough'
+// Cloudflare Image Resizing tags its own subrequests with this Via header.
+// We use it to detect the loopback fetch and short-circuit to raw R2 bytes
+// (custom headers we set on the fetch get stripped by the resizing proxy,
+// so a header we control isn't viable).
+const IMAGE_RESIZING_PROXY_VIA = 'image-resizing-proxy'
+
+const isImageResizingSubrequest = (req: Request): boolean => {
+  const via = req.headers.get('via') || ''
+  return via.includes(IMAGE_RESIZING_PROXY_VIA)
+}
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|svg|ico|bmp|tiff?)$/i
 
@@ -112,8 +119,12 @@ export default {
     const key = decodeURIComponent(path.replace(/^\//, ''))
     if (!key) return new Response('Not Found', { status: 404 })
 
-    // 自循环 subrequest（来自下方 cf.image 的 fetch）：直接回原图字节。
-    if (request.headers.has(PASSTHROUGH_HEADER)) {
+    // cf.image 在做转换时会发 subrequest 回到本 worker 拉原图。它会把请求里
+    // 的自定义 header 剥光，但会自己加 `Via: 1.1 image-resizing-proxy`。
+    // 我们用这个 Via 头来识别这个 loopback、直接回原图，避免再次进入
+    // cf.image 分支造成无限递归（在请求被 CF cancel 之前 catch 兜底会吐
+    // 原图，看上去像"没压缩"，实际是循环爆掉了）。
+    if (isImageResizingSubrequest(request)) {
       return serveR2(env, key, request)
     }
 
@@ -155,7 +166,6 @@ export default {
       const response = await fetch(originUrl, {
         headers: {
           accept: request.headers.get('accept') || 'image/*',
-          [PASSTHROUGH_HEADER]: '1',
         },
         cf: { image: imageOpts },
       })
