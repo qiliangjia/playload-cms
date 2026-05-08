@@ -1,6 +1,29 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { ServerConfig } from './config.js'
+
+const HASH_LENGTH = 12
+
+const contentHash = (data: Buffer): string =>
+  crypto.createHash('sha256').update(data).digest('hex').slice(0, HASH_LENGTH)
+
+const splitFilename = (raw: string): { base: string; ext: string } => {
+  const name = raw.trim() || 'image'
+  const dot = name.lastIndexOf('.')
+  if (dot <= 0) return { base: name, ext: '' }
+  return { base: name.slice(0, dot), ext: name.slice(dot) }
+}
+
+const HASH_SUFFIX_RE = new RegExp(`-[0-9a-f]{${HASH_LENGTH}}$`)
+
+// Mirror of the server-side hook in src/collections/Media.ts so client and
+// server agree on what filename a given file content will end up with.
+const computeTargetFilename = (originalName: string, data: Buffer): string => {
+  const { base, ext } = splitFilename(originalName)
+  const cleanBase = base.replace(HASH_SUFFIX_RE, '') || 'image'
+  return `${cleanBase}-${contentHash(data)}${ext}`
+}
 
 export class PayloadError extends Error {
   status: number
@@ -94,10 +117,24 @@ export class PayloadClient {
   async uploadMedia(filePath: string, alt?: string): Promise<{ id: number; url: string }> {
     const absolute = path.resolve(filePath)
     const data = await fs.readFile(absolute)
+    const originalName = path.basename(absolute)
+    const targetFilename = computeTargetFilename(originalName, data)
+
+    // Reuse an existing media doc when the content is byte-identical. The
+    // server-side hook also produces `<base>-<hash>.<ext>` so the lookup key
+    // is stable across clients.
+    const existing = (await this.get('/api/media', {
+      'where[filename][equals]': targetFilename,
+      limit: 1,
+    })) as { docs?: Array<{ id: number; url: string }> }
+    const reused = existing.docs?.[0]
+    if (reused) {
+      return { id: reused.id, url: reused.url }
+    }
+
     const form = new FormData()
-    const filename = path.basename(absolute)
-    form.append('file', new Blob([data as unknown as BlobPart]), filename)
-    form.append('_payload', JSON.stringify({ alt: alt ?? filename }))
+    form.append('file', new Blob([data as unknown as BlobPart]), targetFilename)
+    form.append('_payload', JSON.stringify({ alt: alt ?? originalName }))
     const resp = (await this.postForm('/api/media', form)) as { doc: { id: number; url: string } }
     return { id: resp.doc.id, url: resp.doc.url }
   }
