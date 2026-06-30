@@ -16,12 +16,14 @@ cms --version              # 0.1.0+ proves it's installed
 cms status                 # logged_in: true is required for everything below
 ```
 
-If `cms` is missing, ask the user (don't try to install silently — they may want to pin a version):
+If `cms` is missing, ask the user (don't try to install silently — they may want to pin a version). The package lives on the internal nexus registry under the `@qlj` scope, so they need `@qlj:registry=https://nexus.qiliangjia.com/repository/npm-local/` in their `~/.npmrc` first:
 ```bash
-npm i -g @deepclick/cms-mcp
+npm i -g @qlj/cms-mcp
 ```
 
-If `logged_in` is `false`, the user must run `cms login` themselves — it opens a browser. Don't run it for them; you'll just hang the session. The token persists 30 days at `~/.config/playload-cms-mcp/token.json`.
+Two ways to authenticate:
+- **Static API key (automation / hub):** set `CMS_API_TOKEN` to a Payload API key from a service account. Every command then authenticates as `Authorization: users API-Key <key>` — no `cms login`, no expiry. `cms status` reports `auth: "api-key"`.
+- **OAuth (interactive human):** if `logged_in` is `false` and `CMS_API_TOKEN` is unset, the user must run `cms login` themselves — it opens a browser. Don't run it for them; you'll just hang the session. The token persists 30 days at `~/.config/playload-cms-mcp/token.json`.
 
 ## The mental model
 

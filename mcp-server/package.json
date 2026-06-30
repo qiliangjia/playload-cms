@@ -1,9 +1,8 @@
 {
-  "name": "@deepclick/cms-mcp",
-  "version": "0.1.0",
-  "description": "MCP server exposing the Payload CMS blog workflow to Claude Code",
+  "name": "@qlj/cms-mcp",
+  "version": "0.2.0",
+  "description": "MCP server + cms CLI exposing the Payload CMS blog workflow to Claude Code",
   "type": "module",
-  "private": true,
   "bin": {
     "cms-mcp": "dist/bin/cms-mcp.js",
     "cms": "dist/bin/cms.js"
@@ -12,13 +11,18 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "registry": "https://nexus.qiliangjia.com/repository/npm-local/",
+    "access": "restricted"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/bin/cms-mcp.js",
     "dev": "tsx bin/cms-mcp.ts",
     "cli": "tsx bin/cms.ts",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { resolveConfig, type ServerConfig } from './config.js'
 import { ensureToken } from './oauth.js'
-import { PayloadClient, PayloadError } from './payloadClient.js'
+import { makeClient, PayloadError } from './payloadClient.js'
 import { buildTools, type ToolContext, type ToolDef } from './tools.js'
 
 const serializeError = (err: unknown): string => {
@@ -24,10 +24,10 @@ export const createServer = (cfg: ServerConfig): Server => {
   const baseDir = process.cwd()
   const tools = buildTools(baseDir)
   const toolMap = new Map<string, ToolDef>(tools.map((t) => [t.name, t]))
-  const client = new PayloadClient(cfg, () => ensureToken(cfg))
+  const client = makeClient(cfg, ensureToken)
   const ctx: ToolContext = { client }
 
-  const server = new Server({ name: 'cms-mcp', version: '0.1.0' }, { capabilities: { tools: {} } })
+  const server = new Server({ name: 'cms-mcp', version: '0.2.0' }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map(toToolListEntry),
