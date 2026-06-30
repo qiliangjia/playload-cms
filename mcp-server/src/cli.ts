@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises'
 import cac from 'cac'
-import { resolveConfig } from './config.js'
+import { apiKeyFromEnv, resolveConfig } from './config.js'
 import { rewriteInlineImages } from './markdown.js'
 import { ensureToken, loginFlow } from './oauth.js'
-import { PayloadClient, PayloadError } from './payloadClient.js'
+import { makeClient, PayloadError } from './payloadClient.js'
 import { clearToken, readToken } from './tokenCache.js'
 import { buildTools, type ToolDef } from './tools.js'
 
@@ -42,7 +42,7 @@ interface CommonOpts {
 const buildClient = (opts: CommonOpts) => {
   const env = opts.baseUrl ? { ...process.env, CMS_MCP_BASE_URL: opts.baseUrl } : process.env
   const cfg = resolveConfig(env)
-  return { cfg, client: new PayloadClient(cfg, () => ensureToken(cfg)) }
+  return { cfg, client: makeClient(cfg, ensureToken) }
 }
 
 const findTool = (name: string): ToolDef => {
@@ -83,6 +83,10 @@ export const buildCli = () => {
     .command('status', 'Show whether a cached token is present and how long it is valid for.')
     .action(async (opts: CommonOpts) => {
       try {
+        if (apiKeyFromEnv()) {
+          print({ logged_in: true, auth: 'api-key', source: 'CMS_API_TOKEN' })
+          return
+        }
         const { cfg } = buildClient(opts)
         const cached = await readToken(cfg)
         if (!cached) {
@@ -288,7 +292,7 @@ export const buildCli = () => {
     })
 
   cli.help()
-  cli.version('0.1.0')
+  cli.version('0.2.0')
   return cli
 }
 

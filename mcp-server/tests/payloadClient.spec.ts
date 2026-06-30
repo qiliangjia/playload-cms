@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { ServerConfig } from '../src/config.js'
-import { PayloadClient, PayloadError } from '../src/payloadClient.js'
+import { makeClient, PayloadClient, PayloadError } from '../src/payloadClient.js'
 
 const cfg: ServerConfig = {
   baseUrl: 'https://cms.example.com',
@@ -38,6 +38,57 @@ describe('PayloadClient', () => {
     expect(res).toEqual({ ok: true })
     const headers = calls[0].init!.headers as Record<string, string>
     expect(headers.Authorization).toBe('Bearer tok')
+  })
+
+  it('sends Payload API-Key Authorization header when scheme is apiKey', async () => {
+    const calls: Array<{ init?: RequestInit }> = []
+    globalThis.fetch = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+      calls.push({ init })
+      return jsonResponse(200, { ok: true })
+    }) as unknown as typeof fetch
+    const client = new PayloadClient(cfg, getToken, 'apiKey')
+    await client.get('/api/users/me')
+    const headers = calls[0].init!.headers as Record<string, string>
+    expect(headers.Authorization).toBe('users API-Key tok')
+  })
+
+  it('makeClient prefers CMS_API_TOKEN (API-Key) over OAuth', async () => {
+    const prev = process.env.CMS_API_TOKEN
+    process.env.CMS_API_TOKEN = 'svc-key'
+    try {
+      const calls: Array<{ init?: RequestInit }> = []
+      globalThis.fetch = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+        calls.push({ init })
+        return jsonResponse(200, { ok: true })
+      }) as unknown as typeof fetch
+      const client = makeClient(cfg, async () => {
+        throw new Error('OAuth must not run when CMS_API_TOKEN is set')
+      })
+      await client.get('/api/users/me')
+      const headers = calls[0].init!.headers as Record<string, string>
+      expect(headers.Authorization).toBe('users API-Key svc-key')
+    } finally {
+      if (prev === undefined) delete process.env.CMS_API_TOKEN
+      else process.env.CMS_API_TOKEN = prev
+    }
+  })
+
+  it('makeClient falls back to OAuth bearer when CMS_API_TOKEN is absent', async () => {
+    const prev = process.env.CMS_API_TOKEN
+    delete process.env.CMS_API_TOKEN
+    try {
+      const calls: Array<{ init?: RequestInit }> = []
+      globalThis.fetch = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+        calls.push({ init })
+        return jsonResponse(200, { ok: true })
+      }) as unknown as typeof fetch
+      const client = makeClient(cfg, async () => 'oauth-tok')
+      await client.get('/api/users/me')
+      const headers = calls[0].init!.headers as Record<string, string>
+      expect(headers.Authorization).toBe('Bearer oauth-tok')
+    } finally {
+      if (prev !== undefined) process.env.CMS_API_TOKEN = prev
+    }
   })
 
   it('appends query parameters, skipping undefined', async () => {

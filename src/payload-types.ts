@@ -131,6 +131,9 @@ export interface User {
   id: number;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -220,12 +223,6 @@ export interface BlogPost {
   } | null;
   contentHtml?: string | null;
   coverImage: number | Media;
-  tags?:
-    | {
-        tag: string;
-        id?: string | null;
-      }[]
-    | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -352,6 +349,9 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -415,12 +415,6 @@ export interface BlogPostsSelect<T extends boolean = true> {
   content?: T;
   contentHtml?: T;
   coverImage?: T;
-  tags?:
-    | T
-    | {
-        tag?: T;
-        id?: T;
-      };
   meta?:
     | T
     | {

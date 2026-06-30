@@ -14,7 +14,24 @@ The CLI reads these env vars, in order:
 1. `CMS_MCP_BASE_URL` — preferred
 2. `PAYLOAD_API_URL` — fallback (kept for parity with the MCP server config)
 
-Token cache lives at `${XDG_CONFIG_HOME:-$HOME/.config}/playload-cms-mcp/token.json` with file mode `0600` and dir mode `0700`. The CLI refuses to read a token from a directory that's group- or world-accessible.
+### Two auth modes
+
+| Mode | When | How |
+|------|------|-----|
+| **Static API key** (`CMS_API_TOKEN`) | Automation / hub-provisioned. Set `CMS_API_TOKEN` and every command authenticates as `Authorization: users API-Key <key>` — **no `cms login`, no token cache, no expiry**. | `export CMS_API_TOKEN=...` then run any command. `cms status` reports `{ logged_in: true, auth: "api-key" }`. |
+| **OAuth** (interactive) | A human on their own machine. | `cms login` opens a browser, writes a 30-day token to the cache below. |
+
+`CMS_API_TOKEN`, when present, always wins — OAuth is skipped entirely. This is what the `qlj-skills` hub uses: it injects a hub-provisioned key so nobody runs `cms login`.
+
+Token cache (OAuth mode only) lives at `${XDG_CONFIG_HOME:-$HOME/.config}/playload-cms-mcp/token.json` with file mode `0600` and dir mode `0700`. The CLI refuses to read a token from a directory that's group- or world-accessible.
+
+### Provisioning a static API key
+
+The key is a Payload-native API key on the `users` collection (`auth.useAPIKey: true`):
+
+1. In the admin UI, create or open a service account user (e.g. `cms-bot@deepclick.com`).
+2. Tick **Enable API Key** and save — Payload generates a key that does not expire.
+3. Store that key as the `CMS_API_TOKEN` secret. Rotate by regenerating the key; revoke by un-ticking Enable API Key.
 
 ## Commands
 

@@ -23,3 +23,9 @@ export const resolveConfig = (env: NodeJS.ProcessEnv = process.env): ServerConfi
   const tokenDir = path.join(xdg, 'playload-cms-mcp')
   return { baseUrl, tokenDir, tokenFile: path.join(tokenDir, 'token.json') }
 }
+
+// Hub-provisioned static API key (Payload-native API key on the users
+// collection). When present, the CLI/MCP authenticate with it and skip OAuth
+// entirely. Single source of truth for the env var name + normalization.
+export const apiKeyFromEnv = (env: NodeJS.ProcessEnv = process.env): string | undefined =>
+  env.CMS_API_TOKEN?.trim() || undefined

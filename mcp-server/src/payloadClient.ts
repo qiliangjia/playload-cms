@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { ServerConfig } from './config.js'
+import { apiKeyFromEnv, type ServerConfig } from './config.js'
 
 const HASH_LENGTH = 12
 
@@ -66,6 +66,9 @@ export class PayloadClient {
   constructor(
     private readonly cfg: ServerConfig,
     private readonly getToken: () => Promise<string>,
+    // 'bearer' = OAuth JWT（Authorization: Bearer <jwt>）；
+    // 'apiKey' = Payload 原生 API Key（Authorization: users API-Key <key>）。
+    private readonly authScheme: 'bearer' | 'apiKey' = 'bearer',
   ) {}
 
   private async request(
@@ -84,7 +87,9 @@ export class PayloadClient {
       }
     }
     const token = await this.getToken()
-    const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+    const authValue =
+      this.authScheme === 'apiKey' ? `users API-Key ${token}` : `Bearer ${token}`
+    const headers: Record<string, string> = { Authorization: authValue }
     let body: BodyInit | undefined
     if (init.form) {
       body = init.form
@@ -146,4 +151,17 @@ const safeJson = (text: string): unknown => {
   } catch {
     return text
   }
+}
+
+// Pick the auth scheme from the environment. A hub-provisioned static API key
+// (CMS_API_TOKEN) skips OAuth entirely — no `cms login`, no token cache — which
+// is what the qlj-skills hub relies on; otherwise fall back to the cached OAuth
+// token. `ensureOauthToken` is injected to avoid an import cycle with oauth.ts.
+export const makeClient = (
+  cfg: ServerConfig,
+  ensureOauthToken: (cfg: ServerConfig) => Promise<string>,
+): PayloadClient => {
+  const apiKey = apiKeyFromEnv()
+  if (apiKey) return new PayloadClient(cfg, async () => apiKey, 'apiKey')
+  return new PayloadClient(cfg, () => ensureOauthToken(cfg))
 }
