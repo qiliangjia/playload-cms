@@ -129,150 +129,121 @@ export const buildCli = () => {
       }
     })
 
+  // cac (6.x) matches a command by its FIRST token only, so space-nested names
+  // like `post list` never match — it sees `post` and falls through. Model each
+  // group as a single `<group> <action>` command with a positional action and
+  // dispatch internally, which preserves the documented `cms post list` UX.
   cli
-    .command('post list', 'List blog posts.')
-    .option('--status <status>', 'draft | published')
+    .command('post <action> [idOrSlug]', 'Posts: list | get | create | update | publish | unpublish')
+    .option('--status <status>', 'list: draft | published')
     .option('--locale <locale>', 'CMS locale (e.g. en, zh)')
-    .option('--limit <n>', '', { default: 20 })
-    .option('--page <n>', '', { default: 1 })
-    .option('--search <q>', 'Title contains')
-    .action(async (opts: CommonOpts & Record<string, unknown>) => {
+    .option('--limit <n>', 'list: page size', { default: 20 })
+    .option('--page <n>', 'list: page number', { default: 1 })
+    .option('--search <q>', 'list: title contains')
+    .option('--file <path>', 'create/update: markdown file (create reads stdin if omitted)')
+    .option('--data <json>', 'create/update: extra blogPosts fields as JSON')
+    .action(async (action: string, idOrSlug: string | undefined, opts: CommonOpts & Record<string, unknown>) => {
       try {
         const { client } = buildClient(opts)
-        const args: Record<string, unknown> = {
-          status: opts.status,
-          locale: opts.locale,
-          limit: Number(opts.limit),
-          page: Number(opts.page),
-          search: opts.search,
+        const needId = (verb: string) => {
+          if (!idOrSlug) throw new Error(`usage: cms post ${verb} <idOrSlug>`)
+          return idOrSlug
         }
-        print(await findTool('post_list').handler(args, { client }))
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('post get <idOrSlug>', 'Fetch one blog post by id or slug.')
-    .option('--locale <locale>', 'CMS locale (e.g. en, zh)')
-    .action(async (idOrSlug: string, opts: CommonOpts & Record<string, unknown>) => {
-      try {
-        const { client } = buildClient(opts)
-        print(await findTool('post_get').handler({ id: idOrSlug, locale: opts.locale }, { client }))
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('post create', 'Create a blog post from a markdown file or stdin.')
-    .option('--file <path>', 'Markdown file; if omitted, read from stdin.')
-    .option('--locale <locale>', 'CMS locale (e.g. en, zh)')
-    .option('--data <json>', 'Extra blogPosts fields as JSON.')
-    .action(async (opts: CommonOpts & Record<string, unknown>) => {
-      try {
-        const markdown = opts.file
-          ? await fs.readFile(String(opts.file), 'utf8')
-          : await readStdin()
-        if (!markdown.trim()) throw new Error('markdown body is empty')
-        const { client } = buildClient(opts)
-        const args = {
-          markdown,
-          locale: opts.locale,
-          data: opts.data ? JSON.parse(String(opts.data)) : undefined,
+        switch (action) {
+          case 'list':
+            return print(
+              await findTool('post_list').handler(
+                {
+                  status: opts.status,
+                  locale: opts.locale,
+                  limit: Number(opts.limit),
+                  page: Number(opts.page),
+                  search: opts.search,
+                },
+                { client },
+              ),
+            )
+          case 'get':
+            return print(
+              await findTool('post_get').handler({ id: needId('get'), locale: opts.locale }, { client }),
+            )
+          case 'create': {
+            const markdown = opts.file ? await fs.readFile(String(opts.file), 'utf8') : await readStdin()
+            if (!markdown.trim()) throw new Error('markdown body is empty')
+            return print(
+              await findTool('post_create').handler(
+                { markdown, locale: opts.locale, data: opts.data ? JSON.parse(String(opts.data)) : undefined },
+                { client },
+              ),
+            )
+          }
+          case 'update': {
+            const id = needId('update')
+            const markdown = opts.file ? await fs.readFile(String(opts.file), 'utf8') : undefined
+            return print(
+              await findTool('post_update').handler(
+                { id, markdown, locale: opts.locale, data: opts.data ? JSON.parse(String(opts.data)) : undefined },
+                { client },
+              ),
+            )
+          }
+          case 'publish':
+            return print(await findTool('post_publish').handler({ id: needId('publish') }, { client }))
+          case 'unpublish':
+            return print(await findTool('post_unpublish').handler({ id: needId('unpublish') }, { client }))
+          default:
+            throw new Error(`unknown post action: ${action} (use list|get|create|update|publish|unpublish)`)
         }
-        print(await findTool('post_create').handler(args, { client }))
       } catch (err) {
         fail(err)
       }
     })
 
   cli
-    .command('post update <idOrSlug>', 'Update a blog post (markdown and/or data patch).')
-    .option('--file <path>', 'Markdown file; omit to skip body update.')
-    .option('--locale <locale>', 'CMS locale (e.g. en, zh)')
-    .option('--data <json>', 'Partial blogPosts patch as JSON.')
-    .action(async (idOrSlug: string, opts: CommonOpts & Record<string, unknown>) => {
+    .command('media <action> [path]', 'Media: list | upload <path>')
+    .option('--alt <text>', 'upload: alt text; defaults to file name')
+    .option('--limit <n>', 'list: page size', { default: 20 })
+    .option('--page <n>', 'list: page number', { default: 1 })
+    .action(async (action: string, filePath: string | undefined, opts: CommonOpts & Record<string, unknown>) => {
       try {
-        const markdown = opts.file ? await fs.readFile(String(opts.file), 'utf8') : undefined
         const { client } = buildClient(opts)
-        const args = {
-          id: idOrSlug,
-          markdown,
-          locale: opts.locale,
-          data: opts.data ? JSON.parse(String(opts.data)) : undefined,
+        switch (action) {
+          case 'list':
+            return print(
+              await findTool('media_list').handler(
+                { limit: Number(opts.limit), page: Number(opts.page) },
+                { client },
+              ),
+            )
+          case 'upload':
+            if (!filePath) throw new Error('usage: cms media upload <path>')
+            return print(await findTool('media_upload').handler({ path: filePath, alt: opts.alt }, { client }))
+          default:
+            throw new Error(`unknown media action: ${action} (use list|upload)`)
         }
-        print(await findTool('post_update').handler(args, { client }))
       } catch (err) {
         fail(err)
       }
     })
 
   cli
-    .command('post publish <idOrSlug>', 'Publish a blog post.')
-    .action(async (idOrSlug: string, opts: CommonOpts) => {
-      try {
-        const { client } = buildClient(opts)
-        print(await findTool('post_publish').handler({ id: idOrSlug }, { client }))
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('post unpublish <idOrSlug>', 'Unpublish a blog post (back to draft).')
-    .action(async (idOrSlug: string, opts: CommonOpts) => {
-      try {
-        const { client } = buildClient(opts)
-        print(await findTool('post_unpublish').handler({ id: idOrSlug }, { client }))
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('media upload <path>', 'Upload a local file to the media collection.')
-    .option('--alt <text>', 'Alt text; defaults to file name.')
-    .action(async (filePath: string, opts: CommonOpts & Record<string, unknown>) => {
-      try {
-        const { client } = buildClient(opts)
-        print(await findTool('media_upload').handler({ path: filePath, alt: opts.alt }, { client }))
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('media list', 'List recent media assets.')
-    .option('--limit <n>', '', { default: 20 })
-    .option('--page <n>', '', { default: 1 })
-    .action(async (opts: CommonOpts & Record<string, unknown>) => {
-      try {
-        const { client } = buildClient(opts)
-        print(
-          await findTool('media_list').handler(
-            { limit: Number(opts.limit), page: Number(opts.page) },
-            { client },
-          ),
-        )
-      } catch (err) {
-        fail(err)
-      }
-    })
-
-  cli
-    .command('category list', 'List blog categories.')
+    .command('category <action>', 'Categories: list')
     .option('--locale <locale>', 'CMS locale (e.g. en, zh)')
     .option('--limit <n>', '', { default: 100 })
-    .action(async (opts: CommonOpts & Record<string, unknown>) => {
+    .action(async (action: string, opts: CommonOpts & Record<string, unknown>) => {
       try {
         const { client } = buildClient(opts)
-        print(
-          await findTool('category_list').handler(
-            { locale: opts.locale, limit: Number(opts.limit) },
-            { client },
-          ),
-        )
+        switch (action) {
+          case 'list':
+            return print(
+              await findTool('category_list').handler(
+                { locale: opts.locale, limit: Number(opts.limit) },
+                { client },
+              ),
+            )
+          default:
+            throw new Error(`unknown category action: ${action} (use list)`)
+        }
       } catch (err) {
         fail(err)
       }
@@ -292,7 +263,7 @@ export const buildCli = () => {
     })
 
   cli.help()
-  cli.version('0.2.0')
+  cli.version('0.2.1')
   return cli
 }
 

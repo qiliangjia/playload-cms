@@ -27,7 +27,7 @@ export const createServer = (cfg: ServerConfig): Server => {
   const client = makeClient(cfg, ensureToken)
   const ctx: ToolContext = { client }
 
-  const server = new Server({ name: 'cms-mcp', version: '0.2.0' }, { capabilities: { tools: {} } })
+  const server = new Server({ name: 'cms-mcp', version: '0.2.1' }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map(toToolListEntry),
