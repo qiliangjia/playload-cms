@@ -22,7 +22,10 @@
     "cli": "tsx bin/cms.ts",
     "test": "vitest run",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
+    "deploy:private": "npm run lint && npm test && npm publish",
+    "deploy:private:dry-run": "npm run lint && npm test && npm run build && npm pack --dry-run",
+    "release:patch": "npm version patch --no-git-tag-version && npm run deploy:private",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

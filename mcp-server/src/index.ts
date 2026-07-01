@@ -5,6 +5,7 @@ import { resolveConfig, type ServerConfig } from './config.js'
 import { ensureToken } from './oauth.js'
 import { makeClient, PayloadError } from './payloadClient.js'
 import { buildTools, type ToolContext, type ToolDef } from './tools.js'
+import { VERSION } from './version.js'
 
 const serializeError = (err: unknown): string => {
   if (err instanceof PayloadError) {
@@ -27,7 +28,7 @@ export const createServer = (cfg: ServerConfig): Server => {
   const client = makeClient(cfg, ensureToken)
   const ctx: ToolContext = { client }
 
-  const server = new Server({ name: 'cms-mcp', version: '0.2.2' }, { capabilities: { tools: {} } })
+  const server = new Server({ name: 'cms-mcp', version: VERSION }, { capabilities: { tools: {} } })
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map(toToolListEntry),

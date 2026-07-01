@@ -6,6 +6,7 @@ import { ensureToken, loginFlow } from './oauth.js'
 import { makeClient, PayloadError } from './payloadClient.js'
 import { clearToken, readToken } from './tokenCache.js'
 import { buildTools, type ToolDef } from './tools.js'
+import { VERSION } from './version.js'
 
 const print = (value: unknown): void => {
   if (value === undefined) return
@@ -263,7 +264,7 @@ export const buildCli = () => {
     })
 
   cli.help()
-  cli.version('0.2.2')
+  cli.version(VERSION)
   return cli
 }
 
