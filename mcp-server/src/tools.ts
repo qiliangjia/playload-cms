@@ -240,7 +240,7 @@ export const buildTools = (baseDir: string | undefined): ToolDef[] => [
       const id = args.id ?? args.slug
       if (!id) throw new Error('id or slug is required')
       const resolved = await resolvePostId(client, id as string | number)
-      return client.patch(`/api/blogPosts/${resolved}`, { _status: 'published' })
+      return client.patch(`/api/blogPosts/${resolved}`, { status: 'published' })
     },
   },
   {
@@ -258,7 +258,7 @@ export const buildTools = (baseDir: string | undefined): ToolDef[] => [
       const id = args.id ?? args.slug
       if (!id) throw new Error('id or slug is required')
       const resolved = await resolvePostId(client, id as string | number)
-      return client.patch(`/api/blogPosts/${resolved}`, { _status: 'draft' })
+      return client.patch(`/api/blogPosts/${resolved}`, { status: 'draft' })
     },
   },
 ]
