@@ -21,6 +21,12 @@ const optStr = (v: unknown): string | undefined => (typeof v === 'string' ? v : 
 const optNum = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined)
 const optObj = (v: unknown): Record<string, unknown> | undefined =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined
+const withEndpointAliases = (data: Record<string, unknown>): Record<string, unknown> => ({
+  ...data,
+  ...(data.coverImageId === undefined && data.coverImage !== undefined
+    ? { coverImageId: data.coverImage }
+    : {}),
+})
 
 // Map a Payload document id or slug to the numeric id used by `/api/blogPosts/:id`.
 const resolvePostId = async (
@@ -166,7 +172,7 @@ export const buildTools = (baseDir: string | undefined): ToolDef[] => [
         data: {
           type: 'object',
           description:
-            'Additional blogPosts fields (title, slug, excerpt, heroImage, category, status, etc.).',
+            'Additional blogPosts fields (title, slug, excerpt, coverImage, category, status, etc.).',
         },
       },
       required: ['markdown'],
@@ -175,11 +181,14 @@ export const buildTools = (baseDir: string | undefined): ToolDef[] => [
     handler: async (args, { client }) => {
       const markdown = str(args.markdown, 'markdown')
       const rewritten = await rewriteInlineImages(markdown, baseDir, client)
+      const data = optObj(args.data) ?? {}
+      const endpointData = withEndpointAliases(data)
       return client.post('/api/cms-mcp/from-markdown', {
+        ...endpointData,
+        data,
         mode: 'create',
         markdown: rewritten,
         locale: optStr(args.locale),
-        data: optObj(args.data) ?? {},
       })
     },
   },
@@ -202,11 +211,14 @@ export const buildTools = (baseDir: string | undefined): ToolDef[] => [
       const id = args.id ?? args.slug
       if (!id) throw new Error('id or slug is required')
       const resolved = await resolvePostId(client, id as string | number)
+      const data = optObj(args.data) ?? {}
+      const endpointData = withEndpointAliases(data)
       const body: Record<string, unknown> = {
+        ...endpointData,
+        data,
         mode: 'update',
         id: resolved,
         locale: optStr(args.locale),
-        data: optObj(args.data) ?? {},
       }
       const markdown = optStr(args.markdown)
       if (markdown) body.markdown = await rewriteInlineImages(markdown, baseDir, client)

@@ -1,4 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import {
+  getMissingCreateFields,
+  normalizeBlogPostData,
+} from '../../src/endpoints/cmsMcpFromMarkdown'
 
 // The endpoint body is module-scoped inside the handler; extract the regex here
 // to keep test coverage against the same rule.
@@ -19,5 +23,58 @@ describe('cmsMcpFromMarkdown relative-image guard', () => {
   })
   it('ignores non-image links', () => {
     expect(RELATIVE_IMAGE_PATTERN.test('[text](./foo.md)')).toBe(false)
+  })
+})
+
+describe('cmsMcpFromMarkdown data normalization', () => {
+  it('accepts CLI-style nested data with the collection coverImage field', () => {
+    const data = normalizeBlogPostData({
+      data: {
+        title: 'Launch notes',
+        slug: 'launch-notes',
+        category: 7,
+        coverImage: 308,
+      },
+    })
+
+    expect(data).toMatchObject({
+      title: 'Launch notes',
+      slug: 'launch-notes',
+      category: 7,
+      coverImage: 308,
+    })
+    expect(getMissingCreateFields(data)).toEqual([])
+  })
+
+  it('accepts coverImageId as an API alias for coverImage', () => {
+    const data = normalizeBlogPostData({
+      data: {
+        title: 'Launch notes',
+        slug: 'launch-notes',
+        category: 7,
+        coverImageId: 308,
+      },
+    })
+
+    expect(data.coverImage).toBe(308)
+    expect(data.coverImageId).toBeUndefined()
+    expect(getMissingCreateFields(data)).toEqual([])
+  })
+
+  it('lets top-level fields override nested data for backwards compatibility', () => {
+    const data = normalizeBlogPostData({
+      title: 'Top-level title',
+      status: 'published',
+      meta: { title: 'SEO title' },
+      data: {
+        title: 'Nested title',
+        slug: 'nested-slug',
+      },
+    })
+
+    expect(data.title).toBe('Top-level title')
+    expect(data.slug).toBe('nested-slug')
+    expect(data.status).toBe('published')
+    expect(data.meta).toEqual({ title: 'SEO title' })
   })
 })

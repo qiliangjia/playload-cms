@@ -13,13 +13,65 @@ interface Body {
   title?: string
   slug?: string
   category?: number | string
+  author?: number | string
+  coverImage?: number | string
   coverImageId?: number | string
   excerpt?: string
+  status?: string
+  publishDate?: string
+  featured?: boolean
+  meta?: Record<string, unknown>
+  data?: Record<string, unknown>
 }
 
 const RELATIVE_IMAGE_PATTERN = /!\[[^\]]*]\((?!https?:\/\/|data:)[^)]+\)/
 
 const json = (body: unknown, status = 200) => Response.json(body, { status })
+
+const TOP_LEVEL_DATA_FIELDS = [
+  'title',
+  'slug',
+  'category',
+  'coverImage',
+  'coverImageId',
+  'excerpt',
+  'author',
+  'status',
+  'publishDate',
+  'featured',
+  'meta',
+] as const
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const hasRequiredValue = (value: unknown): boolean =>
+  value !== undefined && value !== null && value !== ''
+
+export const normalizeBlogPostData = (body: Body): Record<string, unknown> => {
+  const data = isObject(body.data) ? { ...body.data } : {}
+
+  for (const field of TOP_LEVEL_DATA_FIELDS) {
+    const value = body[field]
+    if (value !== undefined) data[field] = value
+  }
+
+  if (data.coverImage === undefined && data.coverImageId !== undefined) {
+    data.coverImage = data.coverImageId
+  }
+  delete data.coverImageId
+
+  return data
+}
+
+export const getMissingCreateFields = (data: Record<string, unknown>): string[] => {
+  const missing: string[] = []
+  if (!hasRequiredValue(data.title)) missing.push('title')
+  if (!hasRequiredValue(data.slug)) missing.push('slug')
+  if (!hasRequiredValue(data.category)) missing.push('category')
+  if (!hasRequiredValue(data.coverImage)) missing.push('coverImageId')
+  return missing
+}
 
 export const cmsMcpFromMarkdown: Endpoint = {
   method: 'post',
@@ -41,10 +93,18 @@ export const cmsMcpFromMarkdown: Endpoint = {
     if (mode !== 'convert' && mode !== 'create' && mode !== 'update') {
       return json({ error: 'invalid_mode' }, 400)
     }
-    if (!markdown.trim()) {
+
+    const data = normalizeBlogPostData(body)
+    const hasMarkdown = Boolean(markdown.trim())
+    const hasData = Object.keys(data).length > 0
+
+    if ((mode === 'convert' || mode === 'create') && !hasMarkdown) {
       return json({ error: 'markdown_required' }, 400)
     }
-    if (RELATIVE_IMAGE_PATTERN.test(markdown)) {
+    if (mode === 'update' && !hasMarkdown && !hasData) {
+      return json({ error: 'markdown_or_data_required' }, 400)
+    }
+    if (hasMarkdown && RELATIVE_IMAGE_PATTERN.test(markdown)) {
       return json(
         {
           error: 'relative_image_url',
@@ -55,11 +115,15 @@ export const cmsMcpFromMarkdown: Endpoint = {
       )
     }
 
-    const editorConfig = await sanitizeServerEditorConfig(
-      blogPostsMarkdownImportConfig,
-      req.payload.config,
-    )
-    const lexical = convertMarkdownToLexical({ editorConfig, markdown })
+    const lexical = hasMarkdown
+      ? convertMarkdownToLexical({
+          editorConfig: await sanitizeServerEditorConfig(
+            blogPostsMarkdownImportConfig,
+            req.payload.config,
+          ),
+          markdown,
+        })
+      : undefined
 
     if (mode === 'convert') {
       return json({ lexical })
@@ -71,30 +135,31 @@ export const cmsMcpFromMarkdown: Endpoint = {
     }
 
     if (mode === 'create') {
-      if (
-        !body.title ||
-        !body.slug ||
-        body.category === undefined ||
-        body.coverImageId === undefined
-      ) {
-        return json(
-          { error: 'missing_fields', fields: ['title', 'slug', 'category', 'coverImageId'] },
-          400,
-        )
+      const missingFields = getMissingCreateFields(data)
+      if (missingFields.length > 0) {
+        return json({ error: 'missing_fields', fields: missingFields }, 400)
       }
       try {
+        const createData = {
+          ...data,
+          content: lexical as unknown as {
+            [k: string]: unknown
+            root: {
+              type: string
+              children: { [k: string]: unknown; type: string; version: number }[]
+              direction: 'ltr' | 'rtl'
+              format: '' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end'
+              indent: number
+              version: number
+            }
+          },
+          status: data.status ?? 'draft',
+        }
+
         const created = await req.payload.create({
           collection: 'blogPosts',
           locale,
-          data: {
-            title: body.title,
-            slug: body.slug,
-            content: lexical as unknown as { [k: string]: unknown; root: { type: string; children: { [k: string]: unknown; type: string; version: number }[]; direction: 'ltr' | 'rtl'; format: '' | 'left' | 'right' | 'center' | 'justify' | 'start' | 'end'; indent: number; version: number } },
-            category: body.category as number,
-            coverImage: body.coverImageId as number,
-            status: 'draft',
-            ...(body.excerpt ? { excerpt: body.excerpt } : {}),
-          },
+          data: createData as any,
           user: req.user,
           overrideAccess: false,
         })
@@ -109,18 +174,14 @@ export const cmsMcpFromMarkdown: Endpoint = {
       return json({ error: 'missing_id' }, 400)
     }
     try {
-      const data: Record<string, unknown> = {
-        content: lexical,
-      }
-      if (typeof body.title === 'string') data.title = body.title
-      if (typeof body.slug === 'string') data.slug = body.slug
-      if (typeof body.excerpt === 'string') data.excerpt = body.excerpt
+      const updateData: Record<string, unknown> = { ...data }
+      if (lexical) updateData.content = lexical
 
       const updated = await req.payload.update({
         collection: 'blogPosts',
         id: body.id,
         locale,
-        data,
+        data: updateData,
         user: req.user,
         overrideAccess: false,
       })

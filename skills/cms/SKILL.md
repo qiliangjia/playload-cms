@@ -17,17 +17,20 @@ cms status                 # logged_in: true is required for everything below
 ```
 
 If `cms` is missing, ask the user (don't try to install silently — they may want to pin a version). The package lives on the internal nexus registry under the `@qlj` scope, so they need `@qlj:registry=https://nexus.qiliangjia.com/repository/npm-local/` in their `~/.npmrc` first:
+
 ```bash
 npm i -g @qlj/cms-mcp
 ```
 
 Two ways to authenticate:
+
 - **Static API key (automation / hub):** set `CMS_API_TOKEN` to a Payload API key from a service account. Every command then authenticates as `Authorization: users API-Key <key>` — no `cms login`, no expiry. `cms status` reports `auth: "api-key"`.
 - **OAuth (interactive human):** if `logged_in` is `false` and `CMS_API_TOKEN` is unset, the user must run `cms login` themselves — it opens a browser. Don't run it for them; you'll just hang the session. The token persists 30 days at `~/.config/playload-cms-mcp/token.json`.
 
 ## The mental model
 
 A blog post lives in the `blogPosts` collection. Each post has:
+
 - A numeric `id` (stable) and a string `slug` (human-friendly). The CLI accepts either where it expects an identifier.
 - Per-locale content (`en`, `zh`). **Writes are scoped by `--locale`** — updating English never touches Chinese. Always pass `--locale` for create and update.
 - A `status` field: `draft` or `published`. New posts default to `draft`.
@@ -38,19 +41,22 @@ Inline images in markdown like `![alt](./hero.png)` are uploaded to the `media` 
 ## Workflows
 
 ### Create a draft from a markdown file
+
 ```bash
 cms post create --file ./drafts/my-post.md --locale en \
-  --data '{"title":"My title","slug":"my-slug","excerpt":"...","category":3}'
+  --data '{"title":"My title","slug":"my-slug","excerpt":"...","category":3,"coverImage":12}'
 ```
 
 The response is the created blogPost. **Capture the `id`** so subsequent edits don't need a slug lookup.
 
 If you only have a string in memory, pipe it via stdin:
+
 ```bash
-echo "# Hello\n\nBody..." | cms post create --locale en --data '{"title":"Hello","slug":"hello"}'
+echo "# Hello\n\nBody..." | cms post create --locale en --data '{"title":"Hello","slug":"hello","category":3,"coverImage":12}'
 ```
 
 ### Update an existing post (English only, leaving Chinese alone)
+
 ```bash
 cms post update my-slug --file ./drafts/my-post.md --locale en
 cms post update 42 --data '{"excerpt":"new excerpt"}' --locale en
@@ -59,12 +65,14 @@ cms post update 42 --data '{"excerpt":"new excerpt"}' --locale en
 You can pass `--file`, `--data`, or both. Omit `--file` to skip body update.
 
 ### Publish / unpublish
+
 ```bash
 cms post publish my-slug
 cms post unpublish my-slug
 ```
 
 ### Discover what exists
+
 ```bash
 cms post list --status draft --limit 10
 cms post list --search "hero"
@@ -74,15 +82,19 @@ cms media list
 ```
 
 ### Upload one image (without creating a post)
+
 ```bash
 cms media upload ./hero.png --alt "Hero shot for the Q2 launch"
 ```
 
 ### Escape hatch: call any tool by name
+
 The CLI is a friendly facade over a 10-tool catalog. If you need a flag the CLI doesn't expose, fall through:
+
 ```bash
 cms call post_list '{"status":"draft","where":{"category":{"equals":3}}}'
 ```
+
 The full tool catalog and JSON-schema is in `references/cli-reference.md`.
 
 ## Common failure modes
