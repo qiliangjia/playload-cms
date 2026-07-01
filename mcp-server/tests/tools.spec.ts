@@ -76,4 +76,22 @@ describe('tools post payloads', () => {
       }),
     )
   })
+
+  it('publish sets the plain status field, not Payload _status', async () => {
+    const patch = vi.fn(async () => ({ id: 42, status: 'published' }))
+    const ctx = { client: { patch } as unknown as PayloadClient } satisfies ToolContext
+
+    await findTool('post_publish').handler({ id: 42 }, ctx)
+
+    expect(patch).toHaveBeenCalledWith('/api/blogPosts/42', { status: 'published' })
+  })
+
+  it('unpublish sets the plain status field, not Payload _status', async () => {
+    const patch = vi.fn(async () => ({ id: 42, status: 'draft' }))
+    const ctx = { client: { patch } as unknown as PayloadClient } satisfies ToolContext
+
+    await findTool('post_unpublish').handler({ id: 42 }, ctx)
+
+    expect(patch).toHaveBeenCalledWith('/api/blogPosts/42', { status: 'draft' })
+  })
 })

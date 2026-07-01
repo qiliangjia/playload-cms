@@ -64,6 +64,63 @@ export const normalizeBlogPostData = (body: Body): Record<string, unknown> => {
   return data
 }
 
+// Collect the names of fields that are both `required` and `localized`, walking
+// the presentational nesting (tabs / rows) Payload allows. Writing a non-default
+// locale must satisfy these for that locale or Payload rejects the whole update.
+// Derived from the live collection config so it can't drift out of sync with
+// BlogPosts.ts (e.g. adding another required+localized field).
+type MaybeNestedField = {
+  name?: string
+  required?: boolean
+  localized?: boolean
+  fields?: unknown
+  tabs?: unknown
+}
+
+export const getRequiredLocalizedFields = (fields: readonly unknown[]): string[] => {
+  const names: string[] = []
+  for (const raw of fields) {
+    const field = raw as MaybeNestedField
+    if (field.name && field.required && field.localized) names.push(field.name)
+    if (Array.isArray(field.fields)) names.push(...getRequiredLocalizedFields(field.fields))
+    if (Array.isArray(field.tabs)) {
+      for (const tab of field.tabs as Array<{ fields?: unknown }>) {
+        if (Array.isArray(tab.fields)) names.push(...getRequiredLocalizedFields(tab.fields))
+      }
+    }
+  }
+  return names
+}
+
+// A relationship/upload field comes back as an object at depth > 0 and as a bare
+// id at depth 0; normalize to the id we can write back.
+const toRelationId = (value: unknown): unknown =>
+  isObject(value) && 'id' in value ? (value as { id: unknown }).id : value
+
+// Given the caller's patch plus the document as it currently stands in the
+// target locale (no fallback) and in the default locale, decide which required
+// localized fields to inherit from the default locale. We only fill a field
+// when the caller left it out AND the target locale has no value of its own, so
+// existing per-locale overrides are never clobbered. This is the write-time
+// complement to `localization.fallback: true` (which only fills empty fields on
+// read): it lets a locale write behave like a translation layer over the
+// default locale.
+export const resolveInheritedLocalizedFields = (
+  fields: readonly string[],
+  patch: Record<string, unknown>,
+  targetLocaleDoc: Record<string, unknown>,
+  defaultLocaleDoc: Record<string, unknown>,
+): Record<string, unknown> => {
+  const inherited: Record<string, unknown> = {}
+  for (const field of fields) {
+    if (patch[field] !== undefined) continue
+    if (hasRequiredValue(targetLocaleDoc[field])) continue
+    const value = toRelationId(defaultLocaleDoc[field])
+    if (hasRequiredValue(value)) inherited[field] = value
+  }
+  return inherited
+}
+
 export const getMissingCreateFields = (data: Record<string, unknown>): string[] => {
   const missing: string[] = []
   if (!hasRequiredValue(data.title)) missing.push('title')
@@ -176,6 +233,46 @@ export const cmsMcpFromMarkdown: Endpoint = {
     try {
       const updateData: Record<string, unknown> = { ...data }
       if (lexical) updateData.content = lexical
+
+      // Writing a non-default locale must satisfy blogPosts' required localized
+      // fields for that locale. When the caller omits one (e.g. a body-only
+      // zh-CN translation), inherit it from the default locale instead of
+      // failing. Only read the docs when something is actually missing — a full
+      // payload can't inherit anything, so it skips the two lookups.
+      const localization = req.payload.config.localization
+      const defaultLocale = (localization ? localization.defaultLocale : 'en') as LocaleCode
+      const requiredLocalizedFields = getRequiredLocalizedFields(
+        req.payload.collections.blogPosts.config.fields,
+      )
+      const needsInheritance =
+        locale !== defaultLocale &&
+        requiredLocalizedFields.some((field) => updateData[field] === undefined)
+      if (needsInheritance) {
+        const [targetLocaleDoc, defaultLocaleDoc] = await Promise.all([
+          req.payload.findByID({
+            collection: 'blogPosts',
+            id: body.id,
+            locale,
+            fallbackLocale: false,
+            depth: 0,
+          }),
+          req.payload.findByID({
+            collection: 'blogPosts',
+            id: body.id,
+            locale: defaultLocale,
+            depth: 0,
+          }),
+        ])
+        Object.assign(
+          updateData,
+          resolveInheritedLocalizedFields(
+            requiredLocalizedFields,
+            updateData,
+            targetLocaleDoc as unknown as Record<string, unknown>,
+            defaultLocaleDoc as unknown as Record<string, unknown>,
+          ),
+        )
+      }
 
       const updated = await req.payload.update({
         collection: 'blogPosts',

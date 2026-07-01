@@ -32,7 +32,7 @@ Two ways to authenticate:
 A blog post lives in the `blogPosts` collection. Each post has:
 
 - A numeric `id` (stable) and a string `slug` (human-friendly). The CLI accepts either where it expects an identifier.
-- Per-locale content (`en`, `zh`). **Writes are scoped by `--locale`** — updating English never touches Chinese. Always pass `--locale` for create and update.
+- Per-locale content (`en`, `zh-CN` — the Chinese locale code is `zh-CN`, not `zh`). **Writes are scoped by `--locale`** — updating English never touches Chinese. Always pass `--locale` for create and update. Updating `zh-CN` inherits required localized fields (`title`, `slug`, `coverImage`) from `en` when you don't supply them, so a translation only needs the Chinese body and title.
 - A `status` field: `draft` or `published`. New posts default to `draft`.
 - A markdown body that gets converted to Lexical (Payload's rich text format) on the server.
 

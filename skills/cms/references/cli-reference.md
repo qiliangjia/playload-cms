@@ -47,14 +47,14 @@ The key is a Payload-native API key on the `users` collection (`auth.useAPIKey: 
 
 ### Posts
 
-| Command                                                                                                | Notes                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cms post list [--status draft\|published] [--locale en\|zh] [--limit N=20] [--page N=1] [--search Q]` | `--search` matches `title` with `like`.                                                                                                                  |
-| `cms post get <idOrSlug> [--locale L]`                                                                 | Slug is resolved to id with one extra GET. Numeric strings are treated as ids.                                                                           |
-| `cms post create --file <md> [--locale L] [--data '<json>']`                                           | Markdown can also come from stdin if `--file` is omitted. `--data` accepts any blogPosts field (title, slug, excerpt, category, coverImage, status, ...). |
-| `cms post update <idOrSlug> [--file <md>] [--locale L] [--data '<json>']`                              | Writes scoped to `--locale`. Omit `--file` to skip body update.                                                                                          |
-| `cms post publish <idOrSlug>`                                                                          | PATCH `_status: published`.                                                                                                                              |
-| `cms post unpublish <idOrSlug>`                                                                        | PATCH `_status: draft`.                                                                                                                                  |
+| Command                                                                                                   | Notes                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cms post list [--status draft\|published] [--locale en\|zh-CN] [--limit N=20] [--page N=1] [--search Q]` | `--search` matches `title` with `like`.                                                                                                                                                                                                                                                      |
+| `cms post get <idOrSlug> [--locale L]`                                                                    | Slug is resolved to id with one extra GET. Numeric strings are treated as ids.                                                                                                                                                                                                               |
+| `cms post create --file <md> [--locale L] [--data '<json>']`                                              | Content locales are `en` and `zh-CN` (not `zh`). Markdown can also come from stdin if `--file` is omitted. `--data` accepts any blogPosts field (title, slug, excerpt, category, coverImage, status, ...). The cover field is `coverImage` (`coverImageId` alias) — there is no `heroImage`. |
+| `cms post update <idOrSlug> [--file <md>] [--locale L] [--data '<json>']`                                 | Writes scoped to `--locale` (`en` / `zh-CN`). Omit `--file` to skip body update. When updating `zh-CN`, missing required localized fields (`title`, `slug`, `coverImage`) are inherited from `en`.                                                                                           |
+| `cms post publish <idOrSlug>`                                                                             | PATCH `status: published`.                                                                                                                                                                                                                                                                   |
+| `cms post unpublish <idOrSlug>`                                                                           | PATCH `status: draft`.                                                                                                                                                                                                                                                                       |
 
 ### Media
 
@@ -149,7 +149,7 @@ Either `markdown` or `data` (or both) must be present.
 
 ### `post_publish` / `post_unpublish`
 
-Args: `{ id?: string|number, slug?: string }`. Sets `_status` to `published` / `draft`.
+Args: `{ id?: string|number, slug?: string }`. Sets the `status` field to `published` / `draft` (blogPosts uses a plain `status` select, not Payload draft versioning, so `_status` would be a no-op).
 
 ## Error envelope
 
