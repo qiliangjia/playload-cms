@@ -4,7 +4,9 @@ import path from 'node:path'
 export const OAUTH_CLIENT_ID = 'cms-mcp'
 
 export interface ServerConfig {
-  // Base URL of the Payload CMS deployment, e.g. https://cms.deepclick.com
+  // Base URL of the Payload CMS deployment, e.g. https://playload-cms.deepclick.com
+  // (the Worker's custom domain — NOT cms.deepclick.com, which is an unrelated
+  // record that returns 525).
   baseUrl: string
   // Directory holding the local token cache; file mode 0600, dir mode 0700.
   tokenDir: string
@@ -15,7 +17,7 @@ export const resolveConfig = (env: NodeJS.ProcessEnv = process.env): ServerConfi
   const baseUrl = (env.CMS_MCP_BASE_URL || env.PAYLOAD_API_URL || '').replace(/\/$/, '')
   if (!baseUrl) {
     throw new Error(
-      'CMS_MCP_BASE_URL must be set to the Payload CMS origin (e.g. https://cms.deepclick.com)',
+      'CMS_MCP_BASE_URL must be set to the Payload CMS origin (e.g. https://playload-cms.deepclick.com)',
     )
   }
   const home = env.HOME || os.homedir()
