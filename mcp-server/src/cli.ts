@@ -263,7 +263,7 @@ export const buildCli = () => {
     })
 
   cli.help()
-  cli.version('0.2.1')
+  cli.version('0.2.2')
   return cli
 }
 
